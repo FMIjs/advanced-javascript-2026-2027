@@ -1,0 +1,909 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#faf9f5;color:#141413}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<title>Property Descriptor Lab</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700&family=Instrument+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+<style>
+  :root {
+    --bg: #F1F3F0;
+    --surface: #FFFFFF;
+    --sunk: #E7EBE7;
+    --ink: #1B211F;
+    --muted: #5A6561;
+    --line: #CAD2CD;
+    --accent: #2C52C4;
+    --accent-soft: #E2E8FA;
+    --on: #1B7748;
+    --on-soft: #DAF0E3;
+    --off: #8A928E;
+    --err: #B42318;
+    --err-soft: #FBE3E0;
+    --lock: #965800;
+    --lock-soft: #F7EAD2;
+    --data: #2C52C4;
+    --data-soft: #E2E8FA;
+    --acc: #8A3FB0;
+    --acc-soft: #F1E4F7;
+    --display: "Bricolage Grotesque", "Avenir Next", system-ui, sans-serif;
+    --sans: "Instrument Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+    --mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      color-scheme: dark;
+      --bg: #101413; --surface: #181D1B; --sunk: #0C0F0E; --ink: #E3E8E5; --muted: #98A39E; --line: #313A36;
+      --accent: #8AA6FF; --accent-soft: #1C2540; --on: #4FC58C; --on-soft: #13301F; --off: #6E7773;
+      --err: #FF8A80; --err-soft: #3A1714; --lock: #EBA845; --lock-soft: #33260F;
+      --data: #8AA6FF; --data-soft: #1C2540; --acc: #D39AF0; --acc-soft: #2E1C38;
+    }
+  }
+  :root[data-theme="dark"] {
+    color-scheme: dark;
+    --bg: #101413; --surface: #181D1B; --sunk: #0C0F0E; --ink: #E3E8E5; --muted: #98A39E; --line: #313A36;
+    --accent: #8AA6FF; --accent-soft: #1C2540; --on: #4FC58C; --on-soft: #13301F; --off: #6E7773;
+    --err: #FF8A80; --err-soft: #3A1714; --lock: #EBA845; --lock-soft: #33260F;
+    --data: #8AA6FF; --data-soft: #1C2540; --acc: #D39AF0; --acc-soft: #2E1C38;
+  }
+
+  * { box-sizing: border-box; }
+  body { background: var(--bg); color: var(--ink); font-family: var(--sans); font-size: 15px; line-height: 1.55; }
+  .wrap { max-width: 1120px; margin: 0 auto; padding: 36px 20px 72px; display: grid; gap: 48px; }
+  code, .mono { font-family: var(--mono); font-size: 0.9em; }
+  p { margin: 0; max-width: 68ch; }
+  h1, h2, h3 { margin: 0; text-wrap: balance; }
+  h1 { font-family: var(--display); font-size: clamp(30px, 5vw, 44px); font-weight: 700; letter-spacing: -0.02em; line-height: 1.05; }
+  h2 { font-family: var(--display); font-size: 24px; font-weight: 600; letter-spacing: -0.01em; }
+  h3 { font-size: 15px; font-weight: 600; }
+  .eyebrow { font-family: var(--mono); font-size: 12px; color: var(--muted); letter-spacing: 0.04em; }
+  .sec-tag { font-family: var(--mono); font-size: 12px; color: var(--accent); background: var(--accent-soft); padding: 2px 8px; border-radius: 4px; white-space: nowrap; }
+  .muted { color: var(--muted); }
+
+  header.top { display: grid; gap: 14px; }
+  .flags-legend { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; margin-top: 8px; }
+  .flags-legend div { border-top: 2px solid var(--ink); padding-top: 8px; display: grid; gap: 2px; }
+  .flags-legend b { font-family: var(--mono); font-size: 14px; font-weight: 600; }
+  .flags-legend span { color: var(--muted); font-size: 14px; }
+  @media (max-width: 640px) { .flags-legend { grid-template-columns: 1fr; } }
+
+  section { display: grid; gap: 18px; }
+  .sec-head { display: flex; flex-wrap: wrap; align-items: baseline; gap: 10px 14px; }
+  .sec-head p { flex-basis: 100%; color: var(--muted); }
+
+  .card { background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 18px; display: grid; gap: 14px; align-content: start; min-width: 0; }
+
+  button { font: inherit; color: inherit; cursor: pointer; }
+  button:focus-visible, input:focus-visible, select:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .btn { font-family: var(--mono); font-size: 13px; background: var(--surface); border: 1px solid var(--line); border-radius: 6px; padding: 7px 10px; text-align: left; transition: border-color .15s, background .15s; }
+  .btn:hover { border-color: var(--accent); background: var(--accent-soft); }
+  .btn[aria-pressed="true"] { border-color: var(--accent); background: var(--accent-soft); color: var(--accent); font-weight: 600; }
+  .btn.small { padding: 4px 8px; font-size: 12px; }
+  .row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+
+  /* ---------- Lab ---------- */
+  .lab { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 18px; align-items: start; }
+  @media (max-width: 880px) { .lab { grid-template-columns: 1fr; } }
+  .obj { font-family: var(--mono); font-size: 14px; display: grid; gap: 6px; }
+  .obj .plain { color: var(--muted); display: flex; justify-content: space-between; gap: 12px; padding: 0 0 0 18px; }
+  .obj .plain small { font-size: 11px; color: var(--off); }
+  .obj .brace { color: var(--muted); }
+  .desc { margin-left: 18px; border: 1.5px solid var(--ink); border-radius: 6px; padding: 12px 14px; display: grid; gap: 8px; background: var(--surface); }
+  .desc.static { margin-left: 0; border-width: 1px; border-color: var(--line); }
+  .desc-title { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; flex-wrap: wrap; }
+  .desc-title .kind { font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; padding: 1px 6px; border-radius: 3px; }
+  .kind.data { color: var(--data); background: var(--data-soft); }
+  .kind.accessor { color: var(--acc); background: var(--acc-soft); }
+  .kind.gone { color: var(--muted); background: var(--sunk); }
+  .drow { display: grid; grid-template-columns: 112px auto 1fr; align-items: center; gap: 10px; min-height: 28px; }
+  .drow .k { color: var(--muted); }
+  .drow .val { font-weight: 600; overflow-wrap: anywhere; }
+  .drow .hint { justify-self: end; font-size: 11px; color: var(--lock); background: var(--lock-soft); padding: 1px 6px; border-radius: 3px; white-space: nowrap; }
+  .drow .hint.oneway { color: var(--muted); background: var(--sunk); }
+
+  .sw { position: relative; width: 40px; height: 22px; border-radius: 11px; border: none; background: var(--off); padding: 0; flex: none; transition: background .15s; }
+  .sw::after { content: ""; position: absolute; top: 3px; left: 3px; width: 16px; height: 16px; border-radius: 50%; background: var(--surface); transition: transform .15s; }
+  .sw[aria-checked="true"] { background: var(--on); }
+  .sw[aria-checked="true"]::after { transform: translateX(18px); }
+  .sw:disabled { cursor: default; }
+  .swv { display: inline-flex; align-items: center; gap: 8px; }
+  .tf { font-weight: 600; }
+  .tf.t { color: var(--on); } .tf.f { color: var(--off); }
+  .dot { width: 10px; height: 10px; border-radius: 50%; background: var(--off); display: inline-block; }
+  .dot.t { background: var(--on); }
+
+  .actions { display: grid; gap: 8px; }
+  .actions .btn { display: block; width: 100%; }
+  .n-input { display: flex; align-items: center; gap: 8px; font-family: var(--mono); font-size: 13px; color: var(--muted); }
+  .n-input input { width: 80px; font: inherit; color: var(--ink); background: var(--surface); border: 1px solid var(--line); border-radius: 5px; padding: 4px 8px; }
+  .group-label { font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); margin-top: 4px; }
+
+  .console { background: var(--sunk); border-radius: 6px; padding: 10px 12px; font-family: var(--mono); font-size: 12.5px; max-height: 260px; overflow-y: auto; display: grid; gap: 8px; align-content: start; min-height: 120px; }
+  .entry { display: grid; gap: 2px; }
+  .entry .c { color: var(--ink); overflow-wrap: anywhere; }
+  .entry .c::before { content: "› "; color: var(--muted); }
+  .entry .r { padding-left: 14px; overflow-wrap: anywhere; }
+  .entry.ok .r { color: var(--on); }
+  .entry.err .r { color: var(--err); }
+  .entry.silent .r { color: var(--lock); }
+  .entry.info .r { color: var(--muted); }
+
+  .vis-wrap { overflow-x: auto; }
+  table { border-collapse: collapse; width: 100%; font-size: 13.5px; }
+  th { text-align: left; font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); padding: 8px 10px; border-bottom: 1px solid var(--line); }
+  td { padding: 8px 10px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  tr:last-child td { border-bottom: none; }
+  td.code, td.out { font-family: var(--mono); font-size: 12.5px; }
+  td.out { color: var(--muted); overflow-wrap: anywhere; }
+  td.out mark { background: var(--on-soft); color: var(--on); font-weight: 600; border-radius: 2px; padding: 0 2px; }
+  .badge { font-size: 12px; font-weight: 600; padding: 2px 8px; border-radius: 10px; white-space: nowrap; }
+  .badge.yes { color: var(--on); background: var(--on-soft); }
+  .badge.no { color: var(--muted); background: var(--sunk); }
+  .rule-tag { font-size: 11px; color: var(--muted); }
+
+  /* ---------- Accessors ---------- */
+  .three { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 18px; }
+  @media (max-width: 960px) { .three { grid-template-columns: 1fr; } }
+  .big { font-family: var(--display); font-size: 34px; font-weight: 600; line-height: 1; font-variant-numeric: tabular-nums; }
+  .big small { font-size: 16px; color: var(--muted); font-family: var(--sans); font-weight: 500; }
+  .slider { display: grid; gap: 4px; }
+  .slider label { font-family: var(--mono); font-size: 12.5px; display: flex; justify-content: space-between; gap: 8px; }
+  .slider label .tag { font-size: 11px; padding: 0 6px; border-radius: 3px; }
+  .tag.get { color: var(--acc); background: var(--acc-soft); }
+  .tag.set { color: var(--acc); background: var(--acc-soft); }
+  .tag.raw { color: var(--muted); background: var(--sunk); }
+  input[type="range"] { width: 100%; accent-color: var(--acc); }
+  .thermo { height: 12px; border-radius: 6px; background: var(--sunk); overflow: hidden; }
+  .thermo div { height: 100%; background: linear-gradient(90deg, var(--data), var(--acc), var(--err)); transition: width .1s; }
+  .readout { font-family: var(--mono); font-size: 12.5px; color: var(--muted); min-height: 2.6em; }
+  .readout b { color: var(--ink); font-weight: 600; }
+  .readout.err b { color: var(--err); }
+  .circle-box { display: flex; align-items: center; gap: 16px; }
+  .circle-box svg { width: 110px; height: 110px; flex: none; }
+  .acc-input { display: flex; gap: 8px; flex-wrap: wrap; }
+  .acc-input input { font-family: var(--mono); font-size: 13px; width: 110px; color: var(--ink); background: var(--surface); border: 1px solid var(--line); border-radius: 5px; padding: 6px 8px; }
+
+  /* ---------- Builder ---------- */
+  .builder { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 18px; align-items: start; }
+  @media (max-width: 880px) { .builder { grid-template-columns: 1fr; } }
+  .groups { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
+  @media (max-width: 520px) { .groups { grid-template-columns: 1fr; } }
+  .grp { border-radius: 6px; padding: 10px; display: grid; gap: 8px; align-content: start; }
+  .grp.data { background: var(--data-soft); }
+  .grp.accessor { background: var(--acc-soft); }
+  .grp.shared { background: var(--sunk); }
+  .grp .gname { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.08em; }
+  .grp.data .gname { color: var(--data); }
+  .grp.accessor .gname { color: var(--acc); }
+  .grp.shared .gname { color: var(--muted); }
+  .chip { font-family: var(--mono); font-size: 12.5px; border: 1px dashed var(--line); background: transparent; border-radius: 5px; padding: 6px 8px; text-align: left; color: var(--muted); }
+  .chip[aria-pressed="true"] { border-style: solid; background: var(--surface); color: var(--ink); font-weight: 600; }
+  .grp.data .chip[aria-pressed="true"] { border-color: var(--data); }
+  .grp.accessor .chip[aria-pressed="true"] { border-color: var(--acc); }
+  .grp.shared .chip[aria-pressed="true"] { border-color: var(--ink); }
+  pre.lit { margin: 0; font-family: var(--mono); font-size: 13px; background: var(--sunk); border-radius: 6px; padding: 12px 14px; overflow-x: auto; line-height: 1.6; }
+  .verdict { border-radius: 6px; padding: 12px 14px; display: grid; gap: 4px; }
+  .verdict.ok { background: var(--on-soft); }
+  .verdict.ok b { color: var(--on); }
+  .verdict.err { background: var(--err-soft); }
+  .verdict.err b { color: var(--err); }
+  .verdict .mono { overflow-wrap: anywhere; }
+
+  /* ---------- Inspector ---------- */
+  .inspector { display: grid; grid-template-columns: minmax(0, 300px) minmax(0, 1fr); gap: 18px; align-items: start; }
+  @media (max-width: 760px) { .inspector { grid-template-columns: 1fr; } }
+  .targets { display: grid; gap: 6px; }
+  .targets .btn { width: 100%; }
+
+  /* ---------- Freeze ---------- */
+  .freeze { display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr); gap: 18px; align-items: start; }
+  @media (max-width: 880px) { .freeze { grid-template-columns: 1fr; } }
+  pre.src { margin: 0; font-family: var(--mono); font-size: 13px; background: var(--sunk); border-radius: 6px; padding: 10px 0; overflow-x: auto; line-height: 1.7; }
+  pre.src span { display: block; padding: 0 14px; border-left: 3px solid transparent; }
+  pre.src span.hl { background: var(--accent-soft); border-left-color: var(--accent); }
+  .ftable td, .ftable th { text-align: center; }
+  .ftable td:first-child, .ftable th:first-child { text-align: left; }
+  .flash { animation: flash 1s ease-out; }
+  @keyframes flash { from { background: var(--lock-soft); } to { background: transparent; } }
+  @media (prefers-reduced-motion: reduce) {
+    .flash { animation: none; }
+    .sw, .sw::after, .thermo div, .btn { transition: none; }
+  }
+  footer { color: var(--muted); font-size: 13px; }
+  footer a { color: var(--accent); }
+</style>
+
+<div class="wrap">
+  <header class="top">
+    <div class="eyebrow">week3/defineProperty.js</div>
+    <h1>Property Descriptor Lab</h1>
+    <p>Each property on an object carries a descriptor: its value plus three flags that decide what other code may do with it. Every result on this page comes from real <code>Object.defineProperty</code> calls running in your browser, so the errors and outputs are what the JavaScript engine actually produces.</p>
+    <div class="flags-legend">
+      <div><b>writable</b><span>Can the value be changed by assignment?</span></div>
+      <div><b>enumerable</b><span>Does it show up in <code>Object.keys</code>, <code>for...in</code>, JSON and spread?</span></div>
+      <div><b>configurable</b><span>Can it be deleted, or its flags redefined?</span></div>
+    </div>
+  </header>
+
+  <!-- ================= LAB ================= -->
+  <section id="lab">
+    <div class="sec-head">
+      <h2>The lab</h2>
+      <span class="sec-tag">§1 · §2 · §3 · §4 · §8</span>
+      <p>Start the <code>id</code> property one of two ways, then flip its flags and run operations against it. Flipping a switch calls <code>Object.defineProperty</code> with just that flag, so a non-configurable property will refuse.</p>
+    </div>
+    <div class="lab">
+      <div class="card">
+        <div class="row" role="group" aria-label="How to create id">
+          <button class="btn" id="start-define" aria-pressed="true">Object.defineProperty(person, 'id', { value: 42 })</button>
+          <button class="btn" id="start-assign" aria-pressed="false">person.id = 42</button>
+        </div>
+        <div class="obj">
+          <div class="brace">const person = {</div>
+          <div class="plain"><span>firstName: 'Ivan',</span><small>w e c</small></div>
+          <div class="plain"><span>lastName: 'Petrov',</span><small>w e c</small></div>
+          <div id="lab-desc"></div>
+          <div class="brace">};</div>
+        </div>
+      </div>
+
+      <div class="card">
+        <label class="n-input" for="lab-n">N =
+          <input id="lab-n" type="number" value="99">
+        </label>
+        <div class="actions" id="lab-actions"></div>
+        <div class="row" style="justify-content: space-between;">
+          <h3>Console</h3>
+          <button class="btn small" id="lab-clear">Clear</button>
+        </div>
+        <div class="console" id="lab-console" aria-live="polite"></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="row" style="justify-content: space-between;">
+        <h3>Who can see <code>id</code>?</h3>
+        <span class="muted" style="font-size: 13px;">Updates live as you change the flags</span>
+      </div>
+      <div class="vis-wrap">
+        <table>
+          <thead><tr><th>Expression</th><th>Result</th><th>id</th></tr></thead>
+          <tbody id="vis-body"></tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= ACCESSORS ================= -->
+  <section id="accessors">
+    <div class="sec-head">
+      <h2>Getters and setters</h2>
+      <span class="sec-tag">§5 · §6</span>
+      <p>An accessor property has no stored value. Reading it calls <code>get</code>, assigning to it calls <code>set</code>. Leave out the setter and the property becomes read-only.</p>
+    </div>
+    <div class="three">
+      <div class="card">
+        <h3><code>temperature.fahrenheit</code></h3>
+        <div class="big" id="t-big">77<small> °F</small></div>
+        <div class="thermo" aria-hidden="true"><div id="t-fill"></div></div>
+        <div class="slider">
+          <label for="t-f"><span>temperature.fahrenheit = </span><span class="tag set">calls set()</span></label>
+          <input id="t-f" type="range" min="-40" max="248" step="1" value="77">
+        </div>
+        <div class="slider">
+          <label for="t-c"><span>temperature._celsius = </span><span class="tag raw">plain data</span></label>
+          <input id="t-c" type="range" min="-40" max="120" step="1" value="25">
+        </div>
+        <div class="readout" id="t-read"></div>
+      </div>
+
+      <div class="card">
+        <h3><code>circle.area</code> <span class="muted">getter only</span></h3>
+        <div class="circle-box">
+          <svg viewBox="0 0 110 110" aria-hidden="true">
+            <circle cx="55" cy="55" r="52" fill="none" stroke="var(--line)" stroke-dasharray="3 4"></circle>
+            <circle id="c-shape" cx="55" cy="55" r="20" fill="var(--acc-soft)" stroke="var(--acc)" stroke-width="2"></circle>
+          </svg>
+          <div class="big" id="c-big">12.566<small> area</small></div>
+        </div>
+        <div class="slider">
+          <label for="c-r"><span>circle.radius = </span><span id="c-rv" class="mono">2</span></label>
+          <input id="c-r" type="range" min="0.5" max="5" step="0.5" value="2">
+        </div>
+        <div class="row">
+          <button class="btn small" id="c-sloppy">circle.area = 100</button>
+          <button class="btn small" id="c-strict">'use strict'; circle.area = 100</button>
+        </div>
+        <div class="readout" id="c-read">The area is computed from the radius every time you read it.</div>
+      </div>
+
+      <div class="card">
+        <h3><code>acc.balance</code> <span class="muted">validated setter</span></h3>
+        <div class="big" id="a-big">0<small> balance</small></div>
+        <div class="acc-input">
+          <input id="a-in" type="text" value="100" aria-label="Value to assign">
+          <button class="btn small" id="a-set">acc.balance = value</button>
+        </div>
+        <div class="row">
+          <button class="btn small" data-quick="250">250</button>
+          <button class="btn small" data-quick="-5">-5</button>
+          <button class="btn small" data-quick="'50'">'50'</button>
+          <button class="btn small" data-quick="0">0</button>
+        </div>
+        <div class="readout" id="a-read">The real number lives in a closure variable. <b>Object.keys(acc)</b> is ['balance'] and there is no <b>acc._balance</b> to tamper with.</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= BUILDER ================= -->
+  <section id="builder">
+    <div class="sec-head">
+      <h2>Descriptor builder</h2>
+      <span class="sec-tag">§7</span>
+      <p>A descriptor is either a data descriptor (<code>value</code>, <code>writable</code>) or an accessor descriptor (<code>get</code>, <code>set</code>). The two shared flags work with either. Toggle keys and see what the engine accepts.</p>
+    </div>
+    <div class="builder">
+      <div class="card">
+        <div class="groups" id="b-groups"></div>
+        <pre class="lit" id="b-code"></pre>
+      </div>
+      <div class="card">
+        <div class="verdict" id="b-verdict"></div>
+        <div id="b-result"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= INSPECTOR ================= -->
+  <section id="inspector">
+    <div class="sec-head">
+      <h2>Descriptor inspector</h2>
+      <span class="sec-tag">§9 · §10</span>
+      <p>Built-ins use the same flags. This is why <code>for...in</code> over an array never lists <code>map</code>, and why <code>Math.PI = 3</code> does nothing.</p>
+    </div>
+    <div class="inspector">
+      <div class="targets" id="i-targets" role="group" aria-label="Pick a property"></div>
+      <div class="card">
+        <div class="mono" id="i-code" style="overflow-wrap: anywhere;"></div>
+        <div id="i-desc"></div>
+        <p id="i-note" class="muted"></p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= FREEZE ================= -->
+  <section id="freeze">
+    <div class="sec-head">
+      <h2>Building your own Object.freeze</h2>
+      <span class="sec-tag">§11</span>
+      <p>Step through <code>myFreeze({ a: 1, b: 2 })</code>. Each loop turn locks one key, then <code>preventExtensions</code> stops new keys from being added. Try the assignments before and after.</p>
+    </div>
+    <div class="freeze">
+      <div class="card">
+        <pre class="src" id="f-src"></pre>
+        <div class="row">
+          <button class="btn" id="f-step">Step</button>
+          <button class="btn" id="f-reset">Reset</button>
+          <span class="muted mono" id="f-status" style="font-size: 12.5px;"></span>
+        </div>
+      </div>
+      <div class="card">
+        <div class="vis-wrap">
+          <table class="ftable">
+            <thead><tr><th>key</th><th>value</th><th>writable</th><th>enumerable</th><th>configurable</th></tr></thead>
+            <tbody id="f-body"></tbody>
+          </table>
+        </div>
+        <div class="mono" id="f-ext" style="font-size: 13px;"></div>
+        <div class="row">
+          <button class="btn small" id="f-try-a">obj.a = 99</button>
+          <button class="btn small" id="f-try-c">obj.c = 3</button>
+          <button class="btn small" id="f-try-frozen">Object.isFrozen(obj)</button>
+        </div>
+        <div class="console" id="f-console" style="min-height: 80px; max-height: 180px;"></div>
+      </div>
+    </div>
+  </section>
+
+  <footer>Examples follow <code>week3/defineProperty.js</code>. Reference: <a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Object/defineProperty" target="_blank" rel="noopener">MDN, Object.defineProperty</a>.</footer>
+</div>
+
+<script>
+// Classic (sloppy-mode) script on purpose: silent failures only happen outside strict mode.
+
+const $ = (s) => document.querySelector(s);
+
+function esc(s) {
+  return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+
+function fmt(v) {
+  if (typeof v === 'string') return "'" + v + "'";
+  if (typeof v === 'function') return 'ƒ ' + (v.name || 'anonymous') + '()';
+  if (typeof v === 'number') return Number.isInteger(v) ? String(v) : String(+v.toFixed(3));
+  if (Array.isArray(v)) return '[' + v.map(fmt).join(', ') + ']';
+  if (v && typeof v === 'object') {
+    const keys = Object.keys(v);
+    return keys.length ? '{ ' + keys.map((k) => k + ': ' + fmt(v[k])).join(', ') + ' }' : '{}';
+  }
+  return String(v);
+}
+
+function strictAssign(obj, key, value) {
+  'use strict';
+  obj[key] = value;
+}
+
+function logTo(el, code, status, msg) {
+  const e = document.createElement('div');
+  e.className = 'entry ' + status;
+  e.innerHTML = '<div class="c"></div>' + (msg ? '<div class="r"></div>' : '');
+  e.querySelector('.c').textContent = code;
+  if (msg) e.querySelector('.r').textContent = msg;
+  el.appendChild(e);
+  el.scrollTop = el.scrollHeight;
+}
+
+// Renders a descriptor as rows. opts.onToggle makes the flags clickable.
+function descriptorHTML(d, opts) {
+  opts = opts || {};
+  if (!d) {
+    return '<div class="desc' + (opts.static ? ' static' : '') + '"><div class="desc-title"><span>' + esc(opts.title || '') +
+      '</span><span class="kind gone">not defined</span></div><div class="muted">The property does not exist.</div></div>';
+  }
+  const isAccessor = 'get' in d || 'set' in d;
+  const locked = !d.configurable;
+  let html = '<div class="desc' + (opts.static ? ' static' : '') + '"><div class="desc-title"><span>' + esc(opts.title || '') + '</span>' +
+    '<span class="kind ' + (isAccessor ? 'accessor">accessor' : 'data">data') + ' descriptor</span></div>';
+
+  function valRow(k, v) {
+    return '<div class="drow"><span class="k">' + k + ':</span><span class="val">' + esc(fmt(v)) + '</span><span></span></div>';
+  }
+  function flagRow(flag) {
+    const on = !!d[flag];
+    let hint = '';
+    if (opts.onToggle && locked) {
+      if (flag === 'writable') hint = on ? '<span class="hint oneway">can go to false only</span>' : '<span class="hint">locked</span>';
+      else hint = '<span class="hint">locked</span>';
+    }
+    const ctl = opts.onToggle
+      ? '<button class="sw" role="switch" aria-checked="' + on + '" data-flag="' + flag + '" aria-label="' + flag + '"></button>'
+      : '<span class="dot' + (on ? ' t' : '') + '"></span>';
+    return '<div class="drow"><span class="k">' + flag + ':</span><span class="swv">' + ctl +
+      '<span class="tf ' + (on ? 't' : 'f') + '">' + on + '</span></span>' + (hint || '<span></span>') + '</div>';
+  }
+
+  if (isAccessor) {
+    html += valRow('get', d.get) + valRow('set', d.set);
+  } else {
+    html += valRow('value', d.value) + flagRow('writable');
+  }
+  html += flagRow('enumerable') + flagRow('configurable') + '</div>';
+  return html;
+}
+
+/* ================= LAB ================= */
+let person;
+const labConsole = $('#lab-console');
+const labLog = (c, s, m) => logTo(labConsole, c, s, m);
+
+function getN() {
+  const n = Number($('#lab-n').value);
+  return Number.isFinite(n) ? n : 99;
+}
+
+function startLab(mode) {
+  person = { firstName: 'Ivan', lastName: 'Petrov' };
+  if (mode === 'define') Object.defineProperty(person, 'id', { value: 42 });
+  else person.id = 42;
+  $('#start-define').setAttribute('aria-pressed', mode === 'define');
+  $('#start-assign').setAttribute('aria-pressed', mode === 'assign');
+  labConsole.innerHTML = '';
+  if (mode === 'define') {
+    labLog("Object.defineProperty(person, 'id', { value: 42 })", 'info', 'New property, and every flag you left out defaults to false.');
+  } else {
+    labLog('person.id = 42', 'info', 'Plain assignment creates the property with all three flags true.');
+  }
+  renderLab();
+}
+
+function runLab(code, fn) {
+  try {
+    const r = fn() || {};
+    labLog(code, r.status || 'ok', r.msg || '');
+  } catch (err) {
+    labLog(code, 'err', err.name + ': ' + err.message);
+  }
+  renderLab();
+}
+
+function toggleFlag(flag) {
+  const d = Object.getOwnPropertyDescriptor(person, 'id');
+  if (!d) return;
+  const next = !d[flag];
+  runLab("Object.defineProperty(person, 'id', { " + flag + ': ' + next + ' })', () => {
+    Object.defineProperty(person, 'id', { [flag]: next });
+    const extra = flag === 'writable' && !next && !d.configurable ? ' This is the one change a non-configurable property still allows, and it cannot be undone.' : '';
+    return { status: 'ok', msg: flag + ' is now ' + next + '. The other flags are unchanged.' + extra };
+  });
+}
+
+const labActions = [
+  {
+    code: (n) => 'person.id = ' + n,
+    run(n) {
+      const had = Object.prototype.hasOwnProperty.call(person, 'id');
+      const before = person.id;
+      person.id = n;
+      if (!had) return { status: 'ok', msg: 'Created a fresh id with all flags true.' };
+      if (Object.is(person.id, n) && !Object.is(before, n)) return { status: 'ok', msg: 'person.id is now ' + fmt(person.id) };
+      if (Object.is(person.id, n)) return { status: 'ok', msg: 'person.id was already ' + fmt(n) };
+      return { status: 'silent', msg: 'No error, but nothing changed. person.id is still ' + fmt(person.id) + ' (silent failure in sloppy mode).' };
+    },
+  },
+  {
+    code: (n) => "'use strict'; person.id = " + n,
+    run(n) {
+      strictAssign(person, 'id', n);
+      return { status: 'ok', msg: 'person.id is now ' + fmt(person.id) };
+    },
+  },
+  {
+    code: () => 'delete person.id',
+    run() {
+      const r = delete person.id;
+      return r
+        ? { status: 'ok', msg: 'true. The property is gone.' }
+        : { status: 'silent', msg: 'false. A non-configurable property cannot be deleted.' };
+    },
+  },
+  {
+    code: (n) => "Object.defineProperty(person, 'id', { value: " + n + ' })',
+    run(n) {
+      const had = Object.prototype.hasOwnProperty.call(person, 'id');
+      Object.defineProperty(person, 'id', { value: n });
+      return had
+        ? { status: 'ok', msg: 'Only value changed. Redefining keeps the flags you did not pass.' }
+        : { status: 'ok', msg: 'New property again, so the missing flags default to false.' };
+    },
+  },
+  {
+    code: () => "Object.defineProperty(person, 'id', { get() { return 7; } })",
+    run() {
+      Object.defineProperty(person, 'id', { get: function get() { return 7; } });
+      return { status: 'ok', msg: 'id is now an accessor property. Reading it calls get().' };
+    },
+  },
+];
+
+function renderActions() {
+  const n = getN();
+  const box = $('#lab-actions');
+  box.innerHTML = '<div class="group-label">Change it</div>';
+  labActions.forEach((a, i) => {
+    if (i === 2) box.insertAdjacentHTML('beforeend', '<div class="group-label">Remove or redefine it</div>');
+    const b = document.createElement('button');
+    b.className = 'btn';
+    b.textContent = a.code(n);
+    b.addEventListener('click', () => runLab(a.code(getN()), () => a.run(getN())));
+    box.appendChild(b);
+  });
+}
+
+const views = [
+  { code: 'person.id', out: () => fmt(person.id), sees: () => person.id !== undefined, note: 'direct access' },
+  { code: "'id' in person", out: () => String('id' in person), sees: () => 'id' in person, note: 'direct access' },
+  { code: 'Object.keys(person)', out: () => fmt(Object.keys(person)), sees: () => Object.keys(person).includes('id'), note: 'enumerable only' },
+  { code: 'for (const k in person)', out: () => { const a = []; for (const k in person) a.push(k); return a.join(', '); }, sees: () => { for (const k in person) if (k === 'id') return true; return false; }, note: 'enumerable only' },
+  { code: 'JSON.stringify(person)', out: () => JSON.stringify(person), sees: () => JSON.stringify(person).includes('"id"'), note: 'enumerable only' },
+  { code: '{ ...person }', out: () => fmt({ ...person }), sees: () => Object.prototype.hasOwnProperty.call({ ...person }, 'id'), note: 'enumerable only' },
+  { code: 'Object.getOwnPropertyNames(person)', out: () => fmt(Object.getOwnPropertyNames(person)), sees: () => Object.getOwnPropertyNames(person).includes('id'), note: 'all own keys' },
+];
+
+function renderLab() {
+  const d = Object.getOwnPropertyDescriptor(person, 'id');
+  $('#lab-desc').innerHTML = descriptorHTML(d, { title: 'id:', onToggle: true });
+  $('#lab-desc').querySelectorAll('.sw').forEach((b) => b.addEventListener('click', () => toggleFlag(b.dataset.flag)));
+
+  $('#vis-body').innerHTML = views.map((v) => {
+    let out;
+    try { out = v.out(); } catch (e) { out = e.name; }
+    const sees = v.sees();
+    const outHtml = esc(out).replace(/\bid\b/g, '<mark>id</mark>');
+    return '<tr><td class="code">' + esc(v.code) + '<div class="rule-tag">' + v.note + '</div></td><td class="out">' + outHtml +
+      '</td><td><span class="badge ' + (sees ? 'yes">sees it' : 'no">skips it') + '</span></td></tr>';
+  }).join('');
+}
+
+$('#start-define').addEventListener('click', () => startLab('define'));
+$('#start-assign').addEventListener('click', () => startLab('assign'));
+$('#lab-clear').addEventListener('click', () => { labConsole.innerHTML = ''; });
+$('#lab-n').addEventListener('input', renderActions);
+renderActions();
+startLab('define');
+
+/* ================= ACCESSORS ================= */
+const temperature = { _celsius: 25 };
+Object.defineProperty(temperature, 'fahrenheit', {
+  get() { return (this._celsius * 9) / 5 + 32; },
+  set(f) { this._celsius = ((f - 32) * 5) / 9; },
+  enumerable: true,
+  configurable: true,
+});
+
+function renderTemp(msg) {
+  const f = temperature.fahrenheit;
+  const c = temperature._celsius;
+  $('#t-big').innerHTML = esc(fmt(f)) + '<small> °F</small>';
+  $('#t-f').value = Math.round(f);
+  $('#t-c').value = Math.round(c);
+  $('#t-fill').style.width = Math.max(0, Math.min(100, ((c + 40) / 160) * 100)) + '%';
+  $('#t-read').innerHTML = msg;
+}
+$('#t-f').addEventListener('input', (e) => {
+  const v = Number(e.target.value);
+  temperature.fahrenheit = v;
+  renderTemp('set(' + v + ') ran, so <b>this._celsius = ' + esc(fmt(temperature._celsius)) + '</b>');
+});
+$('#t-c').addEventListener('input', (e) => {
+  temperature._celsius = Number(e.target.value);
+  renderTemp('No setter here. Reading fahrenheit calls get() and returns <b>' + esc(fmt(temperature.fahrenheit)) + '</b>');
+});
+renderTemp('Reading <b>temperature.fahrenheit</b> calls get() and returns <b>77</b>');
+
+const circle = { radius: 2 };
+Object.defineProperty(circle, 'area', {
+  get() { return Math.PI * this.radius ** 2; },
+});
+function renderCircle() {
+  $('#c-big').innerHTML = esc(circle.area.toFixed(3)) + '<small> area</small>';
+  $('#c-rv').textContent = circle.radius;
+  $('#c-shape').setAttribute('r', (circle.radius / 5) * 52);
+}
+$('#c-r').addEventListener('input', (e) => {
+  circle.radius = Number(e.target.value);
+  renderCircle();
+  $('#c-read').className = 'readout';
+  $('#c-read').innerHTML = 'The getter recomputes <b>Math.PI * ' + circle.radius + ' ** 2</b> on every read.';
+});
+$('#c-sloppy').addEventListener('click', () => {
+  circle.area = 100;
+  $('#c-read').className = 'readout';
+  $('#c-read').innerHTML = 'Silently ignored. There is no setter, so circle.area is still <b>' + circle.area.toFixed(3) + '</b>';
+});
+$('#c-strict').addEventListener('click', () => {
+  try {
+    strictAssign(circle, 'area', 100);
+  } catch (err) {
+    $('#c-read').className = 'readout err';
+    $('#c-read').innerHTML = '<b>' + esc(err.name + ': ' + err.message) + '</b>';
+  }
+});
+renderCircle();
+
+function createAccount() {
+  let balance = 0;
+  const account = {};
+  Object.defineProperty(account, 'balance', {
+    get() { return balance; },
+    set(value) {
+      if (typeof value !== 'number' || value < 0) {
+        throw new RangeError('Balance must be a non-negative number');
+      }
+      balance = value;
+    },
+    enumerable: true,
+  });
+  return account;
+}
+const acc = createAccount();
+
+function parseInput(raw) {
+  const s = raw.trim();
+  const quoted = s.match(/^(['"])(.*)\1$/);
+  if (quoted) return quoted[2];
+  if (s !== '' && Number.isFinite(Number(s))) return Number(s);
+  return s;
+}
+function setBalance() {
+  const v = parseInput($('#a-in').value);
+  try {
+    acc.balance = v;
+    $('#a-read').className = 'readout';
+    $('#a-read').innerHTML = 'acc.balance = ' + esc(fmt(v)) + ' passed validation. Balance is <b>' + esc(fmt(acc.balance)) + '</b>';
+  } catch (err) {
+    $('#a-read').className = 'readout err';
+    $('#a-read').innerHTML = 'acc.balance = ' + esc(fmt(v)) + ' threw <b>' + esc(err.name + ': ' + err.message) + '</b>. Balance stays ' + esc(fmt(acc.balance)) + '.';
+  }
+  $('#a-big').innerHTML = esc(fmt(acc.balance)) + '<small> balance</small>';
+}
+$('#a-set').addEventListener('click', setBalance);
+$('#a-in').addEventListener('keydown', (e) => { if (e.key === 'Enter') setBalance(); });
+document.querySelectorAll('[data-quick]').forEach((b) => b.addEventListener('click', () => {
+  $('#a-in').value = b.dataset.quick;
+  setBalance();
+}));
+
+/* ================= BUILDER ================= */
+const parts = {
+  value: { group: 'data', code: 'value: 1', v: 1 },
+  writable: { group: 'data', code: 'writable: true', v: true },
+  get: { group: 'accessor', code: 'get() { return 2; }', v: function get() { return 2; } },
+  set: { group: 'accessor', code: 'set(v) {}', v: function set(v) {} },
+  enumerable: { group: 'shared', code: 'enumerable: true', v: true },
+  configurable: { group: 'shared', code: 'configurable: true', v: true },
+};
+const chosen = new Set(['value', 'get']);
+const groupNames = { data: 'Data', accessor: 'Accessor', shared: 'Either' };
+
+function renderBuilder() {
+  $('#b-groups').innerHTML = Object.keys(groupNames).map((g) =>
+    '<div class="grp ' + g + '"><span class="gname">' + groupNames[g] + '</span>' +
+    Object.keys(parts).filter((k) => parts[k].group === g).map((k) =>
+      '<button class="chip" data-part="' + k + '" aria-pressed="' + chosen.has(k) + '">' + esc(parts[k].code) + '</button>'
+    ).join('') + '</div>'
+  ).join('');
+  $('#b-groups').querySelectorAll('.chip').forEach((c) => c.addEventListener('click', () => {
+    const k = c.dataset.part;
+    chosen.has(k) ? chosen.delete(k) : chosen.add(k);
+    renderBuilder();
+  }));
+
+  const keys = Object.keys(parts).filter((k) => chosen.has(k));
+  $('#b-code').textContent = keys.length
+    ? "Object.defineProperty({}, 'p', {\n" + keys.map((k) => '  ' + parts[k].code + ',').join('\n') + '\n});'
+    : "Object.defineProperty({}, 'p', {});";
+
+  const desc = {};
+  keys.forEach((k) => { desc[k] = parts[k].v; });
+  const target = {};
+  try {
+    Object.defineProperty(target, 'p', desc);
+    const hasData = chosen.has('value') || chosen.has('writable');
+    const hasAcc = chosen.has('get') || chosen.has('set');
+    const kind = hasData ? 'a data property' : hasAcc ? 'an accessor property' : 'a data property with value undefined (a generic descriptor)';
+    $('#b-verdict').className = 'verdict ok';
+    $('#b-verdict').innerHTML = '<b>Accepted</b><span>This creates ' + kind + '. Anything you left out defaults to false or undefined.</span>';
+    $('#b-result').innerHTML = descriptorHTML(Object.getOwnPropertyDescriptor(target, 'p'), { title: "Object.getOwnPropertyDescriptor(obj, 'p')", static: true });
+  } catch (err) {
+    $('#b-verdict').className = 'verdict err';
+    $('#b-verdict').innerHTML = '<b>' + esc(err.name) + '</b><span class="mono">' + esc(err.message) + '</span>' +
+      '<span>A descriptor cannot hold both a data key and an accessor key.</span>';
+    $('#b-result').innerHTML = '';
+  }
+}
+renderBuilder();
+
+/* ================= INSPECTOR ================= */
+function Person(name) { this.name = name; }
+Object.defineProperty(Person.prototype, 'greeting', {
+  get() { return "Hi, I'm " + this.name; },
+  enumerable: false,
+});
+const book = {};
+Object.defineProperties(book, {
+  title: { value: 'JS: The Good Parts', enumerable: true },
+  author: { value: 'Crockford', enumerable: true },
+  info: { get() { return this.title + ' by ' + this.author; }, enumerable: false },
+});
+
+const targets = [
+  { label: "Array.prototype, 'map'", obj: Array.prototype, key: 'map', note: 'Built-in methods are writable and configurable but not enumerable, so for...in over an array never lists map, filter or push.' },
+  { label: "[1, 2, 3], 'length'", obj: [1, 2, 3], key: 'length', note: 'Writable, so arr.length = 0 truncates the array. Not configurable, so you cannot delete it or turn it into a getter.' },
+  { label: "Math, 'PI'", obj: Math, key: 'PI', note: 'Fully locked: Math.PI = 3 is silently ignored, and delete Math.PI returns false.' },
+  { label: "globalThis, 'undefined'", obj: globalThis, key: 'undefined', note: 'Since ES5 the global undefined is read-only, so undefined = 5 no longer breaks your program.' },
+  { label: "'abc', 0", obj: 'abc', key: 0, note: 'String characters are enumerable but read-only, which is why str[0] = "x" has no effect.' },
+  { label: "function foo() {}, 'name'", obj: function foo() {}, key: 'name', note: 'A function name cannot be assigned, but it is configurable, so Object.defineProperty can still replace it.' },
+  { label: "Person.prototype, 'greeting'", obj: Person.prototype, key: 'greeting', note: "§10: an accessor on the prototype. new Person('Maria').greeting gives \"" + new Person('Maria').greeting + "\", while Object.keys(p) is just ['name']." },
+  { label: "book, 'info'", obj: book, key: 'info', note: '§9: defined with Object.defineProperties. book.info gives "' + book.info + '", and Object.keys(book) is ' + fmt(Object.keys(book)) + '.' },
+  { label: "Object.prototype, '__proto__'", obj: Object.prototype, key: '__proto__', note: '__proto__ is an ordinary accessor property on Object.prototype. Its getter and setter wrap Object.getPrototypeOf and Object.setPrototypeOf.' },
+];
+let current = 0;
+function renderInspector() {
+  $('#i-targets').innerHTML = targets.map((t, i) =>
+    '<button class="btn" data-i="' + i + '" aria-pressed="' + (i === current) + '">' + esc(t.label) + '</button>'
+  ).join('');
+  $('#i-targets').querySelectorAll('.btn').forEach((b) => b.addEventListener('click', () => {
+    current = Number(b.dataset.i);
+    renderInspector();
+  }));
+  const t = targets[current];
+  $('#i-code').textContent = 'Object.getOwnPropertyDescriptor(' + t.label + ')';
+  $('#i-desc').innerHTML = descriptorHTML(Object.getOwnPropertyDescriptor(t.obj, t.key), { static: true });
+  $('#i-note').textContent = t.note;
+}
+renderInspector();
+
+/* ================= FREEZE ================= */
+const srcLines = [
+  'function myFreeze(obj) {',
+  '  for (const key of Reflect.ownKeys(obj)) {',
+  '    const desc = Object.getOwnPropertyDescriptor(obj, key);',
+  "    if ('value' in desc) desc.writable = false;",
+  '    desc.configurable = false;',
+  '    Object.defineProperty(obj, key, desc);',
+  '  }',
+  '  return Object.preventExtensions(obj);',
+  '}',
+];
+let fObj, fKeys, fStep, fChanged;
+const fConsole = $('#f-console');
+
+function resetFreeze() {
+  fObj = { a: 1, b: 2 };
+  fKeys = Reflect.ownKeys(fObj);
+  fStep = 0;
+  fChanged = null;
+  fConsole.innerHTML = '';
+  renderFreeze();
+}
+
+function stepFreeze() {
+  // Like the real loop, read the keys when the call starts (picks up a key added with obj.c = 3).
+  if (fStep === 0) fKeys = Reflect.ownKeys(fObj);
+  if (fStep < fKeys.length) {
+    const key = fKeys[fStep];
+    const desc = Object.getOwnPropertyDescriptor(fObj, key);
+    if ('value' in desc) desc.writable = false;
+    desc.configurable = false;
+    Object.defineProperty(fObj, key, desc);
+    fChanged = key;
+  } else if (fStep === fKeys.length) {
+    Object.preventExtensions(fObj);
+    fChanged = '__ext';
+  }
+  if (fStep <= fKeys.length) fStep++;
+  renderFreeze();
+}
+
+function renderFreeze() {
+  let hl = [];
+  let status = 'Ready. Press Step to run the first loop turn.';
+  if (fStep > 0 && fStep <= fKeys.length) {
+    hl = [1, 2, 3, 4, 5];
+    status = "Loop turn " + fStep + ": key = '" + String(fKeys[fStep - 1]) + "'";
+  } else if (fStep > fKeys.length) {
+    hl = [7];
+    status = 'Done. The object is frozen.';
+  }
+  $('#f-src').innerHTML = srcLines.map((l, i) => '<span' + (hl.includes(i) ? ' class="hl"' : '') + '>' + esc(l) + '</span>').join('');
+  $('#f-status').textContent = status;
+  $('#f-step').disabled = fStep > fKeys.length;
+  $('#f-step').style.opacity = fStep > fKeys.length ? 0.5 : 1;
+
+  const cell = (v, flash) => '<td class="mono' + (flash ? ' flash' : '') + '">' + (typeof v === 'boolean'
+    ? '<span class="tf ' + (v ? 't' : 'f') + '">' + v + '</span>'
+    : esc(fmt(v))) + '</td>';
+  $('#f-body').innerHTML = Reflect.ownKeys(fObj).map((k) => {
+    const d = Object.getOwnPropertyDescriptor(fObj, k);
+    const fl = fChanged === k;
+    return '<tr><td class="mono">' + esc(String(k)) + '</td>' + cell(d.value) + cell(d.writable, fl) + cell(d.enumerable) + cell(d.configurable, fl) + '</tr>';
+  }).join('');
+  const ext = Object.isExtensible(fObj);
+  $('#f-ext').innerHTML = '<span class="' + (fChanged === '__ext' ? 'flash' : '') + '">Object.isExtensible(obj) → <span class="tf ' + (ext ? 't' : 'f') + '">' + ext + '</span></span>';
+  fChanged = null;
+}
+
+$('#f-step').addEventListener('click', stepFreeze);
+$('#f-reset').addEventListener('click', resetFreeze);
+$('#f-try-a').addEventListener('click', () => {
+  const before = fObj.a;
+  fObj.a = 99;
+  if (fObj.a === 99 && before !== 99) logTo(fConsole, 'obj.a = 99', 'ok', 'Changed. a is writable, so it is now 99.');
+  else if (fObj.a === 99) logTo(fConsole, 'obj.a = 99', 'ok', 'a is already 99.');
+  else logTo(fConsole, 'obj.a = 99', 'silent', 'Ignored. a is still ' + fmt(fObj.a) + '.');
+  renderFreeze();
+});
+$('#f-try-c').addEventListener('click', () => {
+  const had = 'c' in fObj;
+  fObj.c = 3;
+  if ('c' in fObj && !had) logTo(fConsole, 'obj.c = 3', 'ok', 'Added. The object is still extensible.');
+  else if (had) logTo(fConsole, 'obj.c = 3', 'info', 'c already exists.');
+  else logTo(fConsole, 'obj.c = 3', 'silent', 'Ignored. preventExtensions blocks new keys.');
+  renderFreeze();
+});
+$('#f-try-frozen').addEventListener('click', () => {
+  const r = Object.isFrozen(fObj);
+  logTo(fConsole, 'Object.isFrozen(obj)', r ? 'ok' : 'info', String(r) + (r ? '' : '. Some key is still writable or configurable, or the object is still extensible.'));
+});
+resetFreeze();
+</script>
+
+</body></html>

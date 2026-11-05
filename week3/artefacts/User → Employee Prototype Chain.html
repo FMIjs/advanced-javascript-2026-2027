@@ -1,0 +1,319 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#faf9f5;color:#141413}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<title>User → Employee Prototype Chain</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;600&display=swap">
+<style>
+  :root {
+    --bg: #F5F6F8;
+    --surface: #FFFFFF;
+    --proto: #EEF1F6;
+    --ink: #1B2230;
+    --muted: #5E6878;
+    --line: #C3CAD6;
+    --path: #0E7A84;
+    --path-soft: #DCF0F1;
+    --found: #B86E05;
+    --found-soft: #FCEFD9;
+    --miss: #B4233A;
+    --sans: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+    --mono: "JetBrains Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      color-scheme: dark;
+      --bg: #12151B; --surface: #1A1F28; --proto: #212734; --ink: #E6E9EF; --muted: #98A2B3;
+      --line: #3A4352; --path: #45BCC6; --path-soft: #173236; --found: #F0A93A; --found-soft: #3A2B12; --miss: #F07186;
+    }
+  }
+  :root[data-theme="dark"] {
+    color-scheme: dark;
+    --bg: #12151B; --surface: #1A1F28; --proto: #212734; --ink: #E6E9EF; --muted: #98A2B3;
+    --line: #3A4352; --path: #45BCC6; --path-soft: #173236; --found: #F0A93A; --found-soft: #3A2B12; --miss: #F07186;
+  }
+
+  body { background: var(--bg); color: var(--ink); font-family: var(--sans); font-size: 15px; line-height: 1.55; }
+  .wrap { max-width: 1080px; margin: 0 auto; padding: 32px 20px 56px; display: grid; gap: 28px; }
+  header { display: grid; gap: 6px; }
+  h1 { font-size: 26px; font-weight: 600; margin: 0; text-wrap: balance; letter-spacing: -0.01em; }
+  h2 { font-size: 13px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); margin: 0 0 10px; }
+  p { margin: 0; max-width: 68ch; }
+  code, .mono { font-family: var(--mono); font-size: 0.88em; }
+  .file { color: var(--muted); font-size: 14px; }
+
+  .main { display: grid; grid-template-columns: minmax(0, 1fr) 300px; gap: 28px; align-items: start; }
+  @media (max-width: 860px) { .main { grid-template-columns: 1fr; } }
+
+  .diagram { overflow-x: auto; background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 12px; }
+  .diagram svg { display: block; width: 100%; min-width: 620px; height: auto; }
+
+  .panel { display: grid; gap: 18px; }
+  .lookups { display: flex; flex-wrap: wrap; gap: 8px; }
+  .lookups button {
+    font-family: var(--mono); font-size: 13px; color: var(--ink); background: var(--surface);
+    border: 1px solid var(--line); border-radius: 6px; padding: 6px 10px; cursor: pointer;
+  }
+  .lookups button:hover { border-color: var(--path); }
+  .lookups button[aria-pressed="true"] { background: var(--path-soft); border-color: var(--path); color: var(--ink); }
+  button:focus-visible { outline: 2px solid var(--path); outline-offset: 2px; }
+
+  .result { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 14px 16px; display: grid; gap: 10px; }
+  .steps { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; font-family: var(--mono); font-size: 13px; }
+  .steps li { display: flex; gap: 8px; }
+  .steps .mark { width: 1.2em; flex: none; }
+  .steps .hit { color: var(--found); font-weight: 600; }
+  .steps .no { color: var(--muted); }
+  .steps .end { color: var(--miss); }
+  .verdict { font-weight: 600; }
+  .note { color: var(--muted); font-size: 14px; }
+
+  .others { display: grid; gap: 8px; }
+  .chain { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; font-family: var(--mono); font-size: 13px; }
+  .chain span.node { background: var(--proto); border: 1px solid var(--line); border-radius: 5px; padding: 2px 7px; }
+  .chain span.node.inst { background: var(--surface); }
+  .chain span.arr { color: var(--muted); }
+
+  .how { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 14px; }
+  .how div { border-top: 2px solid var(--line); padding-top: 10px; display: grid; gap: 6px; }
+  .how code.line { display: block; color: var(--path); overflow-wrap: anywhere; }
+
+  .legend { display: flex; flex-wrap: wrap; gap: 16px; font-size: 13px; color: var(--muted); }
+  .legend i { display: inline-block; width: 12px; height: 12px; border-radius: 3px; vertical-align: -1px; margin-right: 6px; border: 1px solid var(--line); }
+
+  svg text { font-family: var(--mono); }
+</style>
+
+<div class="wrap">
+  <header>
+    <h1>User → Employee prototype chain</h1>
+    <p class="file">From <code>week3/user-employee-new.js</code>. Pick a property lookup to see which objects JavaScript walks through and where it stops.</p>
+  </header>
+
+  <div class="main">
+    <div class="diagram" aria-label="Prototype chain diagram">
+      <svg id="svg" viewBox="0 0 810 820" role="img" aria-label="user and employee prototype chains converging at User.prototype"></svg>
+    </div>
+
+    <aside class="panel">
+      <section>
+        <h2>Look up a property</h2>
+        <div class="lookups" id="lookups"></div>
+      </section>
+      <section class="result" id="result" aria-live="polite"></section>
+      <section class="others">
+        <h2>Other values in the file</h2>
+        <div class="chain"><span class="node inst">a = [1,2,3]</span><span class="arr">→</span><span class="node">Array.prototype</span><span class="arr">→</span><span class="node">Object.prototype</span><span class="arr">→</span><span class="node">null</span></div>
+        <div class="chain"><span class="node inst">obj = { a: 1 }</span><span class="arr">→</span><span class="node">Object.prototype</span><span class="arr">→</span><span class="node">null</span></div>
+      </section>
+      <div class="legend">
+        <span><i style="background:var(--surface)"></i>instance</span>
+        <span><i style="background:var(--proto)"></i>prototype object</span>
+      </div>
+    </aside>
+  </div>
+
+  <section>
+    <h2>Where each link comes from</h2>
+    <div class="how">
+      <div>
+        <code class="line">new User('Ivan', …)</code>
+        <p class="note"><code>new</code> creates <code>user</code> and sets its [[Prototype]] to <code>User.prototype</code>.</p>
+      </div>
+      <div>
+        <code class="line">Employee.prototype = Object.create(User.prototype)</code>
+        <p class="note">Makes a fresh object whose [[Prototype]] is <code>User.prototype</code>. This is the "extends" link.</p>
+      </div>
+      <div>
+        <code class="line">Object.defineProperty(Employee.prototype, 'constructor', …)</code>
+        <p class="note">The fresh object had no own <code>constructor</code>, so it would have inherited <code>User</code>. This puts <code>Employee</code> back, non-enumerable like the default.</p>
+      </div>
+      <div>
+        <code class="line">Employee.prototype = User.prototype ✗</code>
+        <p class="note">Would make both names point at one object. Adding <code>raise</code> would give every <code>user</code> a <code>raise</code> too.</p>
+      </div>
+    </div>
+  </section>
+</div>
+
+<script>
+const NS = "http://www.w3.org/2000/svg";
+const ROW = 22, HEAD = 38, PAD = 10;
+
+const boxes = {
+  user:     { label: "user", tag: "instance", x: 40,  y: 40,  w: 270, inst: true,
+              props: [["name", '"Ivan"'], ["email", '"ivan@example.com"']] },
+  employee: { label: "employee", tag: "instance", x: 480, y: 40, w: 290, inst: true,
+              props: [["name", '"Maria"'], ["email", '"maria@…"'], ["position", '"developer"'], ["salary", "3000"]] },
+  EmpP:     { label: "Employee.prototype", tag: "", x: 480, y: 250, w: 290,
+              props: [["constructor", "Employee · non-enum"], ["greet", "ƒ ()"], ["raise", "ƒ (percent)"]] },
+  UserP:    { label: "User.prototype", tag: "", x: 40, y: 410, w: 270,
+              props: [["constructor", "User"], ["greet", "ƒ ()"], ["toString", "ƒ ()"]] },
+  ObjP:     { label: "Object.prototype", tag: "", x: 40, y: 590, w: 270,
+              props: [["constructor", "Object"], ["hasOwnProperty", "ƒ (key)"], ["toString", "ƒ ()"], ["valueOf", "ƒ ()"]] },
+};
+for (const b of Object.values(boxes)) b.h = HEAD + b.props.length * ROW + PAD;
+
+const NULL = { x: 135, y: 770, w: 80, h: 30 };
+const cx = b => b.x + b.w / 2;
+
+const edges = {
+  "user>UserP":     { d: `M${cx(boxes.user)} ${boxes.user.y + boxes.user.h} V${boxes.UserP.y - 4}`, lx: cx(boxes.user) + 8, ly: 270 },
+  "employee>EmpP":  { d: `M${cx(boxes.employee)} ${boxes.employee.y + boxes.employee.h} V${boxes.EmpP.y - 4}`, lx: cx(boxes.employee) + 8, ly: 216 },
+  "EmpP>UserP":     { d: `M${cx(boxes.EmpP)} ${boxes.EmpP.y + boxes.EmpP.h} V${boxes.UserP.y + 56} H${boxes.UserP.x + boxes.UserP.w + 4}`, lx: 470, ly: boxes.UserP.y + 48 },
+  "UserP>ObjP":     { d: `M${cx(boxes.UserP)} ${boxes.UserP.y + boxes.UserP.h} V${boxes.ObjP.y - 4}`, lx: cx(boxes.UserP) + 8, ly: 562 },
+  "ObjP>null":      { d: `M${cx(boxes.ObjP)} ${boxes.ObjP.y + boxes.ObjP.h} V${NULL.y - 4}`, lx: cx(boxes.ObjP) + 8, ly: 752 },
+};
+
+const chains = { user: ["user", "UserP", "ObjP"], employee: ["employee", "EmpP", "UserP", "ObjP"] };
+
+const notes = {
+  "employee.name": "Own property, set by User.call(this, name, email) inside the Employee constructor.",
+  "employee.greet": "User.prototype.greet is shadowed. Employee's greet still reaches it explicitly with User.prototype.greet.call(this).",
+  "employee.raise": "Only employees have it. It lives on Employee.prototype, so User.prototype stays untouched.",
+  "employee.toString": "Inherited from User, which is why String(employee) prints Maria <maria@example.com>. Object.prototype.toString is shadowed.",
+  "employee.constructor": "Found on Employee.prototype thanks to defineProperty. Without it, the lookup would continue to User.prototype and return User.",
+  "employee.hasOwnProperty": "Comes from Object.prototype, the end of every ordinary chain.",
+  "user.greet": "One hop: user has no own greet, User.prototype does.",
+  "user.raise": "Not on any object in user's chain. The lookup reaches null and returns undefined, so user.raise(10) throws a TypeError.",
+};
+
+const svg = document.getElementById("svg");
+const el = (tag, attrs = {}, text) => {
+  const n = document.createElementNS(NS, tag);
+  for (const [k, v] of Object.entries(attrs)) n.setAttribute(k, v);
+  if (text != null) n.textContent = text;
+  return n;
+};
+
+// arrow markers
+const defs = el("defs");
+for (const [id, color] of [["arr", "var(--line)"], ["arr-on", "var(--path)"]]) {
+  const m = el("marker", { id, viewBox: "0 0 10 10", refX: 8, refY: 5, markerWidth: 7, markerHeight: 7, orient: "auto-start-reverse" });
+  m.appendChild(el("path", { d: "M0 0 L10 5 L0 10 z", fill: color }));
+  defs.appendChild(m);
+}
+svg.appendChild(defs);
+
+const edgeEls = {};
+for (const [key, e] of Object.entries(edges)) {
+  const g = el("g");
+  const p = el("path", { d: e.d, fill: "none", stroke: "var(--line)", "stroke-width": 2, "marker-end": "url(#arr)" });
+  const t = el("text", { x: e.lx, y: e.ly, "font-size": 11, fill: "var(--muted)" }, "[[Prototype]]");
+  g.append(p, t);
+  svg.appendChild(g);
+  edgeEls[key] = { p, t };
+}
+
+const rowEls = Object.create(null), boxEls = Object.create(null);
+for (const [key, b] of Object.entries(boxes)) {
+  const g = el("g");
+  const rect = el("rect", { x: b.x, y: b.y, width: b.w, height: b.h, rx: 8,
+    fill: b.inst ? "var(--surface)" : "var(--proto)", stroke: "var(--line)", "stroke-width": 1.5 });
+  g.appendChild(rect);
+  g.appendChild(el("text", { x: b.x + 14, y: b.y + 25, "font-size": 14, "font-weight": 600, fill: "var(--ink)" }, b.label));
+  if (b.tag) g.appendChild(el("text", { x: b.x + b.w - 14, y: b.y + 25, "font-size": 11, fill: "var(--muted)", "text-anchor": "end" }, b.tag));
+  g.appendChild(el("line", { x1: b.x, x2: b.x + b.w, y1: b.y + HEAD - 6, y2: b.y + HEAD - 6, stroke: "var(--line)" }));
+  rowEls[key] = Object.create(null); // no prototype, so "toString" etc. aren't inherited
+  b.props.forEach(([name, val], i) => {
+    const y = b.y + HEAD + i * ROW;
+    const bg = el("rect", { x: b.x + 4, y: y - 1, width: b.w - 8, height: ROW - 2, rx: 4, fill: "transparent" });
+    const kt = el("text", { x: b.x + 14, y: y + 15, "font-size": 13, fill: "var(--ink)" }, name);
+    const vt = el("text", { x: b.x + b.w - 14, y: y + 15, "font-size": 12, fill: "var(--muted)", "text-anchor": "end" }, val);
+    g.append(bg, kt, vt);
+    rowEls[key][name] = { bg, kt, vt };
+  });
+  svg.appendChild(g);
+  boxEls[key] = rect;
+}
+const nullRect = el("rect", { x: NULL.x, y: NULL.y, width: NULL.w, height: NULL.h, rx: 15, fill: "var(--bg)", stroke: "var(--line)", "stroke-width": 1.5, "stroke-dasharray": "4 3" });
+const nullText = el("text", { x: NULL.x + NULL.w / 2, y: NULL.y + 20, "font-size": 13, fill: "var(--muted)", "text-anchor": "middle" }, "null");
+svg.append(nullRect, nullText);
+
+function reset() {
+  for (const { p, t } of Object.values(edgeEls)) {
+    p.setAttribute("stroke", "var(--line)"); p.setAttribute("marker-end", "url(#arr)"); p.setAttribute("stroke-width", 2);
+    t.setAttribute("fill", "var(--muted)");
+  }
+  for (const [key, rect] of Object.entries(boxEls)) {
+    rect.setAttribute("stroke", "var(--line)"); rect.setAttribute("stroke-width", 1.5);
+    for (const r of Object.values(rowEls[key])) {
+      r.bg.setAttribute("fill", "transparent"); r.kt.setAttribute("fill", "var(--ink)");
+      r.kt.removeAttribute("text-decoration"); r.kt.setAttribute("font-weight", 400); r.kt.setAttribute("opacity", 1);
+    }
+  }
+  nullRect.setAttribute("stroke", "var(--line)"); nullText.setAttribute("fill", "var(--muted)");
+}
+
+function lookup(objName, prop) {
+  reset();
+  const chain = chains[objName];
+  const steps = [];
+  let foundAt = null;
+  for (let i = 0; i < chain.length; i++) {
+    const key = chain[i];
+    const rect = boxEls[key];
+    if (!foundAt) {
+      rect.setAttribute("stroke", "var(--path)"); rect.setAttribute("stroke-width", 2.5);
+      if (i > 0) {
+        const e = edgeEls[`${chain[i - 1]}>${key}`];
+        e.p.setAttribute("stroke", "var(--path)"); e.p.setAttribute("marker-end", "url(#arr-on)"); e.p.setAttribute("stroke-width", 2.5);
+        e.t.setAttribute("fill", "var(--path)");
+      }
+      const row = rowEls[key][prop];
+      if (row) {
+        foundAt = key;
+        row.bg.setAttribute("fill", "var(--found-soft)"); row.kt.setAttribute("fill", "var(--found)"); row.kt.setAttribute("font-weight", 600);
+        rect.setAttribute("stroke", "var(--found)");
+        steps.push({ cls: "hit", mark: "✓", text: `${boxes[key].label} has own "${prop}"` });
+      } else {
+        steps.push({ cls: "no", mark: "·", text: `${boxes[key].label}: no own "${prop}"` });
+      }
+    } else {
+      const row = rowEls[key][prop];
+      if (row) { row.kt.setAttribute("text-decoration", "line-through"); row.kt.setAttribute("opacity", 0.5); }
+    }
+  }
+  if (!foundAt) {
+    const last = chain[chain.length - 1];
+    const e = edgeEls[`${last}>null`];
+    e.p.setAttribute("stroke", "var(--miss)"); e.p.setAttribute("stroke-width", 2.5); e.t.setAttribute("fill", "var(--miss)");
+    nullRect.setAttribute("stroke", "var(--miss)"); nullText.setAttribute("fill", "var(--miss)");
+    steps.push({ cls: "end", mark: "✗", text: "reached null → undefined" });
+  }
+
+  const hops = foundAt ? chain.indexOf(foundAt) : null;
+  const verdict = foundAt
+    ? (hops === 0 ? "Own property, 0 hops." : `Found on ${boxes[foundAt].label}, ${hops} hop${hops > 1 ? "s" : ""} up.`)
+    : "Not found: undefined.";
+  const res = document.getElementById("result");
+  res.innerHTML = "";
+  const h = document.createElement("div");
+  h.className = "mono"; h.style.fontSize = "15px"; h.textContent = `${objName}.${prop}`;
+  const ol = document.createElement("ol"); ol.className = "steps";
+  for (const s of steps) {
+    const li = document.createElement("li"); li.className = s.cls;
+    li.innerHTML = `<span class="mark"></span><span></span>`;
+    li.children[0].textContent = s.mark; li.children[1].textContent = s.text;
+    ol.appendChild(li);
+  }
+  const v = document.createElement("div"); v.className = "verdict"; v.textContent = verdict;
+  const n = document.createElement("p"); n.className = "note"; n.textContent = notes[`${objName}.${prop}`] || "";
+  res.append(h, ol, v, n);
+}
+
+const wrap = document.getElementById("lookups");
+const buttons = [];
+for (const key of Object.keys(notes)) {
+  const [o, p] = key.split(".");
+  const b = document.createElement("button");
+  b.type = "button"; b.id = `lk-${o}-${p}`; b.textContent = key; b.setAttribute("aria-pressed", "false");
+  b.addEventListener("click", () => {
+    buttons.forEach(x => x.setAttribute("aria-pressed", "false"));
+    b.setAttribute("aria-pressed", "true");
+    lookup(o, p);
+  });
+  wrap.appendChild(b); buttons.push(b);
+}
+buttons.find(b => b.textContent === "employee.toString").click();
+</script>
+
+</body></html>

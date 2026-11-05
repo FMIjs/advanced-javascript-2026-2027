@@ -1,0 +1,912 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#faf9f5;color:#141413}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<title>Lexical this Lab</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=IBM+Plex+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;600&display=swap">
+<style>
+:root{
+  --bg:#F2F4F8; --surface:#FFFFFF; --surface-2:#E9ECF3; --ink:#151A24; --muted:#586174; --line:#D6DBE5;
+  --reg:#2A52C4; --arr:#0A7A62; --bad:#B23629; --warn:#8A5A00;
+  --code-bg:#F7F8FB; --term-bg:#151A24; --term-ink:#DCE2EE; --term-muted:#8D97AB;
+  --display:"Bricolage Grotesque", "Avenir Next", "Segoe UI", system-ui, sans-serif;
+  --body:"IBM Plex Sans", "Segoe UI", system-ui, -apple-system, sans-serif;
+  --mono:"JetBrains Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    color-scheme:dark;
+    --bg:#0E1117; --surface:#161B24; --surface-2:#1E2430; --ink:#E5E9F1; --muted:#97A1B5; --line:#2A3140;
+    --reg:#86A2FF; --arr:#3FCDA6; --bad:#FF8070; --warn:#E6B54D;
+    --code-bg:#12161E; --term-bg:#0A0D12; --term-ink:#DCE2EE; --term-muted:#7E889C;
+  }
+}
+:root[data-theme="dark"]{
+  color-scheme:dark;
+  --bg:#0E1117; --surface:#161B24; --surface-2:#1E2430; --ink:#E5E9F1; --muted:#97A1B5; --line:#2A3140;
+  --reg:#86A2FF; --arr:#3FCDA6; --bad:#FF8070; --warn:#E6B54D;
+  --code-bg:#12161E; --term-bg:#0A0D12; --term-ink:#DCE2EE; --term-muted:#7E889C;
+}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font:15px/1.55 var(--body);padding-inline:20px;padding-block:28px 64px}
+.wrap{max-width:1200px;margin:0 auto;display:flex;flex-direction:column;gap:44px}
+h1,h2,h3{font-family:var(--display);text-wrap:balance;margin:0;line-height:1.1}
+h1{font-size:clamp(34px,6vw,58px);font-weight:800;letter-spacing:-.02em}
+h2{font-size:clamp(24px,3.2vw,32px);font-weight:800;letter-spacing:-.01em}
+h3{font-size:18px;font-weight:600}
+p{margin:0}
+code,.mono{font-family:var(--mono);font-size:.9em}
+.eyebrow{font:600 12px/1 var(--body);letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
+.muted{color:var(--muted)}
+button{font:inherit;color:inherit;cursor:pointer}
+:focus-visible{outline:2px solid var(--reg);outline-offset:2px}
+
+/* header */
+header{display:grid;grid-template-columns:1.3fr 1fr;gap:32px;align-items:end}
+header .lede{max-width:56ch;margin-top:14px;color:var(--muted);font-size:16px}
+h1 .t{font-family:var(--mono);font-weight:600;font-size:.86em;padding:0 .12em;border-radius:6px;background:linear-gradient(90deg,color-mix(in srgb,var(--reg) 18%,transparent),color-mix(in srgb,var(--arr) 18%,transparent))}
+.legend{display:grid;gap:10px}
+.legend .k{display:grid;grid-template-columns:auto 1fr;gap:12px;align-items:start;background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:12px 14px}
+.sw{width:12px;height:12px;border-radius:3px;margin-top:5px}
+.sw.reg{background:var(--reg)} .sw.arr{background:var(--arr)}
+.legend b{display:block;font-weight:600}
+.legend span{color:var(--muted);font-size:14px}
+
+/* section heads */
+.shead{display:flex;flex-direction:column;gap:8px;max-width:70ch}
+
+/* syntax widgets */
+.widgets{display:grid;grid-template-columns:1.25fr 1fr;gap:16px}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:18px;display:flex;flex-direction:column;gap:14px;min-width:0}
+.card p{font-size:14px}
+.inputs{display:flex;gap:12px;flex-wrap:wrap}
+.inputs label{display:flex;align-items:center;gap:8px;font:600 13px var(--mono)}
+.inputs input{width:72px;font:14px var(--mono);padding:6px 8px;border:1px solid var(--line);border-radius:6px;background:var(--code-bg);color:var(--ink)}
+.fnrows{display:grid;gap:6px}
+.fnrow{display:grid;grid-template-columns:1fr auto;gap:10px;align-items:center;font:13px/1.4 var(--mono);padding:7px 10px;border-radius:7px;background:var(--code-bg);border-left:3px solid var(--reg);overflow-x:auto}
+.fnrow.arr{border-left-color:var(--arr)}
+.fnrow .res{font-weight:600;white-space:nowrap}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:8px;padding:3px;background:var(--surface-2);gap:3px;flex-wrap:wrap}
+.seg button{border:0;background:transparent;padding:6px 10px;border-radius:6px;font:13px var(--mono)}
+.seg button[aria-pressed="true"]{background:var(--surface);box-shadow:0 1px 2px rgba(0,0,0,.12)}
+.out{font:13px/1.5 var(--mono);padding:10px 12px;border-radius:8px;background:var(--term-bg);color:var(--term-ink);overflow-x:auto;white-space:pre}
+.out .e{color:#FF8E80}
+.btnrow{display:flex;flex-wrap:wrap;gap:8px}
+.call{border:1px solid var(--line);background:var(--surface);padding:7px 11px;border-radius:8px;font:13px var(--mono);display:inline-flex;align-items:center;gap:8px;text-align:left}
+.call:hover{border-color:var(--muted)}
+.call .dot{width:8px;height:8px;border-radius:50%;flex:none;background:var(--muted)}
+.call.reg .dot{background:var(--reg)} .call.arr .dot{background:var(--arr)}
+.call[aria-pressed="true"]{border-color:var(--ink);background:var(--surface-2)}
+.call.reg[aria-pressed="true"]{border-color:var(--reg)}
+.call.arr[aria-pressed="true"]{border-color:var(--arr)}
+
+/* hoisting */
+.hoist{gap:16px}
+.hoist-grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.2fr);gap:16px;align-items:start}
+.code.mini{max-height:none}
+.ln.todo{opacity:.42}
+.ln.cur{background:color-mix(in srgb,var(--warn) 16%,transparent);box-shadow:inset 3px 0 0 var(--warn)}
+.ln.cur i{opacity:1;color:var(--warn)}
+.ln.cur i::before{content:"▶ "}
+.hoist-side{display:flex;flex-direction:column;gap:12px;min-width:0}
+.stopnote{font-size:14px;min-height:3em}
+.bindings{display:grid;gap:8px}
+.bind{display:grid;grid-template-columns:minmax(0,150px) minmax(0,150px) minmax(0,1fr);gap:6px 12px;align-items:center;padding:10px 12px;border:1px solid var(--line);border-radius:10px;background:var(--surface)}
+.bind .nm{font:600 13px var(--mono)}
+.bind .nm small{display:block;font:400 12px var(--body);color:var(--muted)}
+.chip{font:12px var(--mono);padding:3px 8px;border-radius:6px;justify-self:start;border:1.5px solid var(--c);color:var(--ink);background:color-mix(in srgb,var(--c) 12%,transparent);white-space:nowrap}
+.chip.fn{--c:var(--arr)} .chip.tdz{--c:var(--bad);border-style:dashed} .chip.undef{--c:var(--warn)} .chip.none{--c:var(--muted);border-style:dashed;background:transparent}
+.bind .res{font:12px/1.45 var(--mono);overflow-wrap:anywhere}
+.bind .res .e{color:var(--bad)}
+.bind .how{grid-column:1/-1;font-size:13px;color:var(--muted)}
+@media (max-width:960px){.hoist-grid{grid-template-columns:1fr}}
+@media (max-width:560px){.bind{grid-template-columns:1fr 1fr}.bind .res{grid-column:1/-1}}
+
+/* lab */
+.tabs{display:flex;gap:6px;overflow-x:auto;padding-bottom:4px;scrollbar-width:thin}
+.tab{flex:none;border:1px solid var(--line);background:var(--surface);border-radius:999px;padding:7px 14px 7px 8px;display:inline-flex;align-items:center;gap:8px;font-size:14px;white-space:nowrap}
+.tab .n{font:600 12px var(--mono);width:22px;height:22px;border-radius:50%;display:grid;place-items:center;background:var(--surface-2);color:var(--muted)}
+.tab[aria-selected="true"]{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.tab[aria-selected="true"] .n{background:var(--bg);color:var(--ink)}
+.case-head{display:flex;justify-content:space-between;align-items:flex-end;gap:16px;flex-wrap:wrap}
+.case-head p{max-width:62ch;color:var(--muted);margin-top:6px}
+.pager{display:flex;gap:8px}
+.pager button{border:1px solid var(--line);background:var(--surface);border-radius:8px;padding:7px 12px;font-size:14px}
+.pager button:disabled{opacity:.4;cursor:default}
+.lab{display:grid;grid-template-columns:minmax(0,1.1fr) minmax(0,1fr);gap:16px;align-items:start}
+.code{background:var(--code-bg);border:1px solid var(--line);border-radius:12px;overflow:auto;max-height:640px;position:relative;font:13px/1.65 var(--mono);padding-block:10px}
+.code .fname{position:sticky;top:-10px;margin-top:-10px;background:var(--code-bg);border-bottom:1px solid var(--line);padding:8px 14px;font:600 12px var(--mono);color:var(--muted);display:flex;justify-content:space-between;z-index:1}
+.ln{display:grid;grid-template-columns:44px 1fr;white-space:pre;min-width:max-content;padding-right:16px;transition:background .2s}
+.ln i{font-style:normal;color:var(--muted);opacity:.6;text-align:right;padding-right:14px;user-select:none}
+.ln.hit{background:color-mix(in srgb,var(--hl) 13%,transparent);box-shadow:inset 3px 0 0 var(--hl)}
+.ln.hit i{opacity:1;color:var(--hl)}
+.ln.reg{--hl:var(--reg)} .ln.arr{--hl:var(--arr)} .ln.ctx{--hl:var(--warn)}
+.tk-c{color:var(--muted);font-style:italic}
+.tk-s{color:#A0461A}
+.tk-k{color:#7B3FB5}
+.tk-n{color:#A0461A}
+.tk-ar{color:var(--arr);font-weight:600}
+.tk-t{font-weight:600;color:var(--ink);background:color-mix(in srgb,var(--warn) 18%,transparent);border-radius:3px}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]) .tk-s,:root:not([data-theme="light"]) .tk-n{color:#F0A57A}:root:not([data-theme="light"]) .tk-k{color:#C79BFF}}
+:root[data-theme="dark"] .tk-s,:root[data-theme="dark"] .tk-n{color:#F0A57A}
+:root[data-theme="dark"] .tk-k{color:#C79BFF}
+
+.run{display:flex;flex-direction:column;gap:14px}
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:16px;display:flex;flex-direction:column;gap:12px}
+.panel-h{display:flex;justify-content:space-between;align-items:center;gap:10px}
+.term{background:var(--term-bg);color:var(--term-ink);border-radius:12px;font:13px/1.6 var(--mono);overflow:hidden}
+.term-h{display:flex;justify-content:space-between;align-items:center;padding:8px 12px;border-bottom:1px solid rgba(255,255,255,.08);color:var(--term-muted);font-size:12px}
+.term-h button{background:transparent;border:1px solid rgba(255,255,255,.15);color:var(--term-muted);border-radius:6px;padding:2px 8px;font:12px var(--mono)}
+.term-b{padding:10px 12px;max-height:200px;overflow:auto;display:flex;flex-direction:column;gap:2px}
+.term-b .in{color:var(--term-muted)}
+.term-b .in::before{content:"> ";}
+.term-b .o{white-space:pre-wrap}
+.term-b .pend{color:#E6B54D}
+.term-b .flag{color:#E6B54D;font-size:12px}
+.term-b .err{color:#FF8E80}
+
+/* resolver */
+.flow{display:flex;flex-direction:column;gap:0;position:relative}
+.rule{display:grid;grid-template-columns:30px 1fr;gap:12px;position:relative;padding-bottom:12px}
+.rule:last-child{padding-bottom:0}
+.rule::before{content:"";position:absolute;left:14px;top:28px;bottom:0;width:2px;background:var(--line)}
+.rule:last-child::before{display:none}
+.rule .m{width:30px;height:30px;border-radius:50%;display:grid;place-items:center;font:600 11px var(--mono);border:2px solid var(--line);background:var(--surface);color:var(--muted);position:relative;z-index:1}
+.rule .q{font-weight:600;font-size:14px;padding-top:4px}
+.rule .q small{display:block;font-weight:400;color:var(--muted);font-size:13px}
+.rule .a{font-size:13px;color:var(--muted);margin-top:2px}
+.rule.no .m{color:var(--muted)}
+.rule.no .q{color:var(--muted)}
+.rule.dim{opacity:.38}
+.rule.skip{opacity:.5}
+.rule.skip .q{text-decoration:line-through;text-decoration-color:var(--muted)}
+.rule.yes .m{background:var(--c);border-color:var(--c);color:var(--surface)}
+.rule.yes .a{color:var(--ink)}
+.rule.yes::before{background:linear-gradient(var(--c),var(--line))}
+.rule.no::before{background:var(--muted);opacity:.5}
+.rule.reg{--c:var(--reg)} .rule.arr{--c:var(--arr)}
+.ignored{display:inline-block;margin-top:4px;font:12px var(--mono);color:var(--bad);text-decoration:none}
+.chain{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin-top:8px}
+.chain span{font:12px var(--mono);padding:3px 8px;border-radius:6px;border:1px dashed var(--arr);color:var(--ink)}
+.chain span.end{border-style:solid;background:color-mix(in srgb,var(--arr) 14%,transparent)}
+.chain em{font-style:normal;color:var(--arr)}
+.via{font-size:13px;margin-top:6px;color:var(--muted)}
+.strict{display:flex;gap:6px;margin-top:6px;flex-wrap:wrap}
+.strict span{font:12px var(--mono);padding:2px 8px;border-radius:6px;border:1px solid var(--line);color:var(--muted)}
+.strict span.on{border-color:var(--c);color:var(--ink);background:color-mix(in srgb,var(--c) 14%,transparent)}
+.result{display:flex;flex-wrap:wrap;align-items:center;gap:10px;padding:12px 14px;border-radius:10px;background:var(--surface-2)}
+.result .lbl{font:600 13px var(--mono)}
+.result .val{font:13px var(--mono);padding:4px 10px;border-radius:7px;background:var(--surface);border:1.5px solid var(--c)}
+.result .val b{font-weight:600}
+.result.reg{--c:var(--reg)} .result.arr{--c:var(--arr)} .result.bad{--c:var(--bad)}
+.result.bad .val{color:var(--bad)}
+.why{font-size:14px}
+.flagnote{font-size:13px;padding:10px 12px;border-radius:8px;border:1px solid color-mix(in srgb,var(--warn) 45%,transparent);background:color-mix(in srgb,var(--warn) 9%,transparent)}
+.state{font:13px var(--mono);display:inline-flex;gap:8px;align-items:center;padding:4px 10px;border-radius:7px;background:var(--surface-2)}
+.state b{color:var(--arr)}
+
+/* memory widget */
+.mem{display:grid;grid-template-columns:1fr auto 220px;gap:14px;align-items:center}
+.insts{display:flex;flex-wrap:wrap;gap:8px}
+.inst{font:12px/1.5 var(--mono);border:1px solid var(--line);border-radius:8px;padding:8px 10px;background:var(--code-bg);animation:pop .25s ease-out}
+.inst .h{font-weight:600;margin-bottom:2px}
+.inst .f{color:var(--arr)}
+.proto{font:12px/1.5 var(--mono);border:1.5px solid var(--reg);border-radius:8px;padding:10px 12px;background:color-mix(in srgb,var(--reg) 8%,transparent)}
+.proto .f{color:var(--reg)}
+.link{font:12px var(--mono);color:var(--muted);text-align:center}
+.tally{display:flex;gap:14px;flex-wrap:wrap;font-size:13px}
+.tally b{font:600 16px var(--mono);font-variant-numeric:tabular-nums}
+@keyframes pop{from{transform:scale(.9);opacity:.3}to{transform:none;opacity:1}}
+
+/* summary */
+.rules3{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
+.rules3 .card{border-top:3px solid var(--c)}
+.rules3 .card.reg{--c:var(--reg)} .rules3 .card.arr{--c:var(--arr)} .rules3 .card.bad{--c:var(--bad)}
+.jumps{display:flex;flex-wrap:wrap;gap:6px;margin-top:auto}
+.jumps button{border:1px solid var(--line);background:var(--surface-2);border-radius:999px;padding:3px 10px;font-size:12px}
+footer{font-size:13px;color:var(--muted)}
+
+@media (max-width:960px){
+  header{grid-template-columns:1fr}
+  .widgets{grid-template-columns:1fr}
+  .lab{grid-template-columns:1fr}
+  .code{max-height:420px}
+  .rules3{grid-template-columns:1fr}
+  .mem{grid-template-columns:1fr}
+  .link{text-align:left}
+}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+
+<div class="wrap">
+  <header>
+    <div>
+      <div class="eyebrow">week3 / arrowFunctions.js</div>
+      <h1 style="margin-top:12px">Who is <span class="t">this</span>?</h1>
+      <p class="lede">Every example from the file, runnable. Click a call to see what Node prints, which lines run, and the rule JavaScript used to pick <code>this</code>.</p>
+    </div>
+    <div class="legend" aria-label="Colour key">
+      <div class="k"><div class="sw reg"></div><div><b>Regular function</b><span><code>this</code> is decided when the function is <em>called</em>: by what is before the dot, by <code>call</code>/<code>apply</code>/<code>bind</code>, or by <code>new</code>.</span></div></div>
+      <div class="k"><div class="sw arr"></div><div><b>Arrow function</b><span>Has no <code>this</code> of its own. It uses the <code>this</code> of the code it was <em>written</em> inside (lexical <code>this</code>).</span></div></div>
+    </div>
+  </header>
+
+  <section class="shead-wrap" style="display:flex;flex-direction:column;gap:18px" aria-labelledby="syn-h">
+    <div class="shead">
+      <div class="eyebrow">Lines 1–27</div>
+      <h2 id="syn-h">Hoisting and arrow syntax</h2>
+      <p class="muted">The file starts by using four names before their lines run. Each is declared differently, so each fails differently. Then it shows the shapes an arrow can take.</p>
+    </div>
+    <div class="card hoist">
+      <div class="panel-h" style="flex-wrap:wrap"><h3>What exists before its line runs?</h3>
+        <div class="seg" role="group" aria-label="What to do with each name">
+          <button type="button" id="hm-log" aria-pressed="true">console.log(name)</button>
+          <button type="button" id="hm-call" aria-pressed="false">name(1, 2)</button>
+        </div>
+      </div>
+      <div class="hoist-grid">
+        <div class="code mini" id="hoist-code" tabindex="0" aria-label="Lines 2 to 22"></div>
+        <div class="hoist-side">
+          <div style="display:flex;flex-direction:column;gap:8px">
+            <span class="eyebrow">Pause the file</span>
+            <div class="seg" role="group" aria-label="Pause point" id="stops"></div>
+          </div>
+          <p class="stopnote" id="stopnote"></p>
+          <div class="bindings" id="bindings"></div>
+        </div>
+      </div>
+      <p class="muted" style="font-size:13px">Lines 2–6 of the file try this at the start: <code>console.log(addFunc)</code> prints <code>[Function: addFunc]</code>, <code>console.log(varAdd)</code> prints <code>undefined</code>, and lines 3 and 5 are commented out because they throw.</p>
+    </div>
+    <div class="widgets">
+      <div class="card">
+        <h3>Same result, shorter code</h3>
+        <div class="inputs">
+          <label for="in-a">a <input id="in-a" type="number" value="2"></label>
+          <label for="in-b">b <input id="in-b" type="number" value="3"></label>
+        </div>
+        <div class="fnrows" id="fnrows"></div>
+        <p class="muted">A concise body (no braces) returns its expression automatically.</p>
+      </div>
+      <div class="card">
+        <h3>Returning an object</h3>
+        <div class="seg" role="group" aria-label="Arrow body">
+          <button type="button" id="obj-paren" aria-pressed="true">=&gt; ({ a, b })</button>
+          <button type="button" id="obj-brace" aria-pressed="false">=&gt; { a, b }</button>
+        </div>
+        <div class="out" id="obj-out"></div>
+        <p id="obj-why"></p>
+      </div>
+    </div>
+  </section>
+
+  <section style="display:flex;flex-direction:column;gap:18px" aria-labelledby="lab-h">
+    <div class="shead">
+      <div class="eyebrow">Lines 30–193</div>
+      <h2 id="lab-h">Eight cases of <code>this</code></h2>
+    </div>
+    <div class="tabs" role="tablist" id="tabs" aria-label="Cases"></div>
+    <div class="case-head">
+      <div>
+        <h3 id="case-title" style="font-size:22px"></h3>
+        <p id="case-lesson"></p>
+      </div>
+      <div class="pager">
+        <button type="button" id="prev">← Previous</button>
+        <button type="button" id="next">Next →</button>
+      </div>
+    </div>
+    <div class="lab" id="lab" role="tabpanel">
+      <div class="code" id="code" tabindex="0" aria-label="Source code"></div>
+      <div class="run">
+        <div class="panel">
+          <div class="panel-h"><span class="eyebrow">Run a call</span><span id="state"></span></div>
+          <div class="btnrow" id="calls"></div>
+        </div>
+        <div class="term">
+          <div class="term-h"><span>$ node arrowFunctions.js</span><button type="button" id="clear">Clear</button></div>
+          <div class="term-b" id="term" aria-live="polite"></div>
+        </div>
+        <div class="panel" id="resolver"></div>
+      </div>
+    </div>
+    <div class="panel" id="memory" hidden>
+      <div class="panel-h"><span class="eyebrow">Where the handlers live · lines 154–155</span><button type="button" class="call" id="mem-reset">Reset</button></div>
+      <div class="mem">
+        <div style="display:flex;flex-direction:column;gap:10px">
+          <div class="insts" id="insts"></div>
+          <div class="btnrow"><button type="button" class="call arr" id="mem-add"><span class="dot"></span>new Button(…)</button></div>
+        </div>
+        <div class="link">each instance<br>[[Prototype]] →</div>
+        <div class="proto"><div style="font-weight:600">Button.prototype</div><div class="f">handleClickRegular: ƒ</div><div class="muted">one copy, shared</div></div>
+      </div>
+      <div class="tally" id="tally"></div>
+      <p class="muted" style="font-size:13px">Arrow class fields fix <code>this</code> for good, but every instance gets its own function object. Methods on the prototype are shared and cost nothing extra per instance.</p>
+    </div>
+  </section>
+
+  <section style="display:flex;flex-direction:column;gap:18px" aria-labelledby="sum-h">
+    <div class="shead">
+      <div class="eyebrow">Lines 196–199</div>
+      <h2 id="sum-h">When to use which</h2>
+    </div>
+    <div class="rules3">
+      <div class="card reg"><h3>Regular functions for methods</h3><p>Object methods, prototype methods and class methods need <code>this</code> to be the object they are called on.</p><div class="jumps"><button type="button" data-go="0">Object methods</button><button type="button" data-go="6">Prototypes</button></div></div>
+      <div class="card arr"><h3>Arrows for callbacks inside methods</h3><p><code>forEach</code>, <code>map</code>, <code>setTimeout</code>, promises and event handlers. The arrow keeps the method's <code>this</code>.</p><div class="jumps"><button type="button" data-go="1">Callbacks</button><button type="button" data-go="2">setTimeout</button><button type="button" data-go="7">Nested arrows</button></div></div>
+      <div class="card bad"><h3>What arrows can't do</h3><p>Their <code>this</code> can't be changed with <code>call</code>, <code>apply</code> or <code>bind</code>, and they can't be used with <code>new</code>.</p><div class="jumps"><button type="button" data-go="3">call / bind</button><button type="button" data-go="5">new</button></div></div>
+    </div>
+  </section>
+
+  <footer>Outputs come from running the file with Node v22 as a CommonJS module, where top-level <code>this</code> is <code>module.exports</code>.</footer>
+</div>
+
+<script type="text/plain" id="source">
+console.log(addFunc)
+// console.log(add) // Uncaught ReferenceError ReferenceError: Cannot access 'add' before initialization
+console.log(varAdd) // undefined
+// console.log(globalAdd) // Uncaught ReferenceError ReferenceError: globalAdd is not defined
+console.log(addFunc(1, 2));
+
+function addFunc(a, b) {
+  return a + b;
+}
+
+// add() // ReferenceError: Cannot access 'add' before initialization (const is in the TDZ until this line)
+const add = (a, b) => {
+  return a + b;
+}
+var varAdd = (a, b) => {
+  return a + b;
+}
+globalAdd = (a, b) => {
+  return a + b;
+}
+const addShort = (a, b) => a + b;
+
+const constructObj = (a, b) => {
+  return { a, b };
+}
+const constructObjShort = (a, b) => ({ a, b });
+
+
+// ---
+
+// `this` IN REGULAR FUNCTIONS vs ARROW FUNCTIONS
+// Regular function: `this` is decided at CALL time (who is before the dot / call / apply / bind / new)
+// Arrow function: has NO own `this` - it takes `this` from the surrounding scope at DEFINITION time (lexical this)
+
+// 1. Methods on an object literal
+this.name = 'Global'; // In Node.js, this will be module.exports, in browser it will be window
+const user1 = {
+  name: 'Ivan',
+  sayHi() { // same as `sayHi: function () { ... }`
+    console.log('regular:', this.name);
+  },
+  sayHiArrow: () => {
+    // `this` here is NOT user1 - it's the `this` of the outer scope
+    // (in a CommonJS module that's `module.exports` -> { name: 'Global' } after the line above user1)
+    console.log('arrow:', this.name);
+  }
+};
+user1.sayHi(); // regular: Ivan
+user1.sayHiArrow(); // arrow: Global
+
+
+// 2. Callbacks inside a method - the place where arrows shine
+const team = {
+  name: 'Team A',
+  members: ['Ivan', 'Maria'],
+
+  printRegular: function () {
+    this.members.forEach(function (member) {
+      // forEach calls the callback as a plain function -> `this` is globalThis (or undefined in strict mode)
+      console.log(member + ' is in ' + this.name);
+    });
+  },
+
+  // Old fix #1: save `this` in a variable
+  printSelf: function () {
+    const self = this;
+    this.members.forEach(function (member) {
+      console.log(member + ' is in ' + self.name);
+    });
+  },
+
+  // Old fix #2: bind the callback
+  printBind: function () {
+    this.members.forEach(function (member) {
+      console.log(member + ' is in ' + this.name);
+    }.bind(this));
+  },
+
+  // Modern fix: arrow callback takes `this` from printArrow
+  printArrow: function () {
+    this.members.forEach((member) => {
+      console.log(member + ' is in ' + this.name);
+    });
+  }
+};
+team.printRegular(); // Ivan is in undefined, Maria is in undefined
+team.printSelf(); // Ivan is in Team A, Maria is in Team A
+team.printBind(); // Ivan is in Team A, Maria is in Team A
+team.printArrow(); // Ivan is in Team A, Maria is in Team A
+
+
+// 3. Same thing with setTimeout
+const counter = {
+  count: 0,
+  startRegular: function () {
+    setTimeout(function () {
+      // In Node `this` is the Timeout object, in the browser it's window
+      console.log('timeout regular:', this.count);
+    }, 0);
+  },
+  startArrow: function () {
+    setTimeout(() => {
+      this.count++;
+      console.log('timeout arrow:', this.count);
+    }, 0);
+  }
+};
+counter.startRegular(); // timeout regular: undefined
+counter.startArrow(); // timeout arrow: 1
+
+
+// 4. call / apply / bind can NOT change an arrow's `this`
+function regularGetName() { return this && this.name; }
+const arrowGetName = () => this && this.name;
+
+const ivan = { name: 'Ivan' };
+console.log(regularGetName.call(ivan)); // Ivan
+console.log(arrowGetName.call(ivan)); // Global - `ivan` is ignored, `this` is still module.exports
+console.log(regularGetName.bind(ivan)()); // Ivan
+console.log(arrowGetName.bind(ivan)()); // Global
+
+
+// 5. Losing `this` when a method is passed around (extracted)
+const person = {
+  name: 'Maria',
+  greet: function () { return 'Hi, ' + this.name; }
+};
+const greet = person.greet; // just a reference to the function, `person` is forgotten
+console.log(greet()); // Hi, undefined
+console.log(greet.bind(person)()); // Hi, Maria
+
+// Same problem as in week2: emitter.subscribe('done', obj.handleData.bind(obj))
+// Arrow class fields solve it - the arrow is created per instance, inside the constructor,
+// so its `this` is always the instance
+class Button {
+  constructor(label) {
+    this.label = label;
+  }
+
+  handleClickRegular() { // lives on Button.prototype, `this` depends on the call
+    return 'clicked ' + (this && this.label);
+  }
+
+  handleClickArrow = () => { // own property of every instance, `this` is fixed
+    return 'clicked ' + this.label;
+  }
+}
+const btn = new Button('Save');
+const onClickRegular = btn.handleClickRegular;
+const onClickArrow = btn.handleClickArrow;
+console.log(onClickRegular()); // clicked undefined (class bodies are strict -> this is undefined)
+console.log(onClickArrow()); // clicked Save
+console.log(Object.hasOwn(btn, 'handleClickArrow')); // true  -> one copy per instance (more memory)
+console.log(Object.hasOwn(btn, 'handleClickRegular')); // false -> shared via the prototype
+
+
+// 6. Arrow functions can NOT be constructors (no own `this` to create, no `prototype`)
+function PersonFn(name) { this.name = name; }
+const PersonArrow = (name) => { this.name = name; };
+
+console.log(new PersonFn('Ivan')); // PersonFn { name: 'Ivan' }
+console.log(PersonArrow.prototype); // undefined
+try {
+  new PersonArrow('Ivan');
+} catch (e) {
+  console.log(e.message); // PersonArrow is not a constructor
+}
+
+
+// 7. Don't use arrows for prototype methods
+PersonFn.prototype.getNameRegular = function () { return this.name; };
+PersonFn.prototype.getNameArrow = () => this.name; // `this` is the module scope, not the instance
+
+const p = new PersonFn('Georgi');
+console.log(p.getNameRegular()); // Georgi
+console.log(p.getNameArrow()); // Global - module.exports.name, not 'Georgi'
+
+
+// 8. Nested: an arrow takes `this` from the closest REGULAR function around it
+const outer = {
+  name: 'outer',
+  regular: function () {
+    const arrow1 = () => {
+      const arrow2 = () => this.name; // goes up through arrow1 to `regular`
+      return arrow2();
+    };
+    return arrow1();
+  }
+};
+console.log(outer.regular()); // outer
+const other = { name: 'other', regular: outer.regular };
+console.log(other.regular()); // other - `regular`'s `this` changed, so the arrows follow it
+
+
+// Summary:
+// - Use regular functions (or method shorthand) for object/prototype/class methods
+// - Use arrow functions for callbacks inside methods (forEach, map, setTimeout, promises, event handlers)
+// - Arrow `this` can't be changed with call/apply/bind and arrows can't be used with `new`
+</script>
+<script>
+(function(){
+const SRC = document.getElementById('source').textContent.split('\n');
+const L = n => SRC[n-1] ?? '';
+const esc = s => s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+function hl(line){
+  const re = /(\/\/.*$)|('(?:[^'\\]|\\.)*')|\b(this)\b|(=>)|\b(function|const|return|class|new|try|catch|constructor)\b|\b(\d+)\b/g;
+  let out='', last=0, m;
+  while((m = re.exec(line))){
+    out += esc(line.slice(last, m.index));
+    const c = m[1]?'c':m[2]?'s':m[3]?'t':m[4]?'ar':m[5]?'k':'n';
+    out += '<span class="tk-'+c+'">'+esc(m[0])+'</span>';
+    last = re.lastIndex;
+  }
+  return out + esc(line.slice(last));
+}
+const range = (a,b) => Array.from({length:b-a+1},(_,i)=>a+i);
+const store = { get(k){ try{return localStorage.getItem(k)}catch(e){return null} }, set(k,v){ try{localStorage.setItem(k,v)}catch(e){} } };
+
+/* ---------- syntax widgets ---------- */
+const fnDefs = [
+  {k:'reg', code:'addFunc(a, b)', f:(a,b)=>a+b},
+  {k:'arr', code:'add(a, b)', f:(a,b)=>a+b},
+  {k:'arr', code:'varAdd(a, b)', f:(a,b)=>a+b},
+  {k:'arr', code:'globalAdd(a, b)', f:(a,b)=>a+b},
+  {k:'arr', code:'addShort(a, b)', f:(a,b)=>a+b},
+  {k:'arr', code:'constructObj(a, b)', f:(a,b)=>`{ a: ${a}, b: ${b} }`},
+  {k:'arr', code:'constructObjShort(a, b)', f:(a,b)=>`{ a: ${a}, b: ${b} }`},
+];
+const inA = document.getElementById('in-a'), inB = document.getElementById('in-b');
+function renderFns(){
+  const a = Number(inA.value)||0, b = Number(inB.value)||0;
+  document.getElementById('fnrows').innerHTML = fnDefs.map(d =>
+    `<div class="fnrow ${d.k}"><span>${esc(d.code)}</span><span class="res">→ ${esc(String(d.f(a,b)))}</span></div>`).join('');
+}
+inA.addEventListener('input', renderFns); inB.addEventListener('input', renderFns); renderFns();
+
+const objModes = {
+  paren:{code:"const f = (a, b) => ({ a, b });\nf(1, 2)", res:"{ a: 1, b: 2 }", err:false,
+    why:"The parentheses tell JavaScript the braces are an object literal, so the object is returned. This is line 27."},
+  brace:{code:"const f = (a, b) => { a, b };\nf(1, 2)", res:"undefined", err:true,
+    why:"Without parentheses the braces are read as a function body. a, b is just an expression with no return, so the result is undefined."}
+};
+function setObj(mode){
+  document.getElementById('obj-paren').setAttribute('aria-pressed', mode==='paren');
+  document.getElementById('obj-brace').setAttribute('aria-pressed', mode==='brace');
+  const m = objModes[mode];
+  document.getElementById('obj-out').innerHTML = esc(m.code)+'\n<span class="'+(m.err?'e':'')+'">← '+esc(m.res)+'</span>';
+  document.getElementById('obj-why').textContent = m.why;
+}
+document.getElementById('obj-paren').onclick = ()=>setObj('paren');
+document.getElementById('obj-brace').onclick = ()=>setObj('brace');
+setObj('paren');
+
+const STOPS = [
+  {label:'Start', next:2, note:'Nothing has run yet, but JavaScript has already scanned the file and set up every declared name.'},
+  {label:'After line 15', next:16, note:'Line 13 ran, so add now holds its arrow.'},
+  {label:'After line 18', next:19, note:'Line 16 replaced varAdd’s undefined with the arrow.'},
+  {label:'After line 21', next:22, note:'Line 19 assigned to a name nobody declared, so JavaScript created globalThis.globalAdd. In strict mode that line would throw ReferenceError: globalAdd is not defined.'}
+];
+const BINDS = [
+  {name:'addFunc', kind:'function declaration', line:8, k:'reg', at:0, before:'fn', how:'Hoisted together with its body, so line 6 can already call it.'},
+  {name:'add', kind:'const', line:13, k:'arr', at:1, before:'tdz', how:'Hoisted but left uninitialised (the temporal dead zone) until line 13 runs.'},
+  {name:'varAdd', kind:'var', line:16, k:'arr', at:2, before:'undef', how:'Hoisted and set to undefined. The arrow only arrives when line 16 runs.'},
+  {name:'globalAdd', kind:'no declaration', line:19, k:'arr', at:3, before:'none', how:'Not hoisted at all. The name only exists once line 19 runs.'}
+];
+const CHIP = {fn:n=>'ƒ '+n, tdz:()=>'<uninitialized>', undef:()=>'undefined', none:()=>'not declared'};
+let hStop = 0, hMode = 'log';
+function hOut(b, st){
+  const n = b.name;
+  if(st==='fn') return hMode==='log' ? ['[Function: '+n+']',false] : ['3',false];
+  if(st==='tdz') return ["ReferenceError: Cannot access '"+n+"' before initialization",true];
+  if(st==='undef') return hMode==='log' ? ['undefined',false] : ['TypeError: '+n+' is not a function',true];
+  return ['ReferenceError: '+n+' is not defined',true];
+}
+function renderHoist(){
+  const stop = STOPS[hStop];
+  document.getElementById('stops').innerHTML = STOPS.map((s,i)=>`<button type="button" data-i="${i}" aria-pressed="${i===hStop}">${esc(s.label)}</button>`).join('');
+  document.querySelectorAll('#stops button').forEach(b=>b.onclick=()=>{ hStop=+b.dataset.i; renderHoist(); });
+  document.getElementById('hm-log').setAttribute('aria-pressed', hMode==='log');
+  document.getElementById('hm-call').setAttribute('aria-pressed', hMode==='call');
+  document.getElementById('stopnote').textContent = stop.note;
+  const decl = {}; BINDS.forEach(b=>{ if(hStop>=b.at) decl[b.line]=b.k; });
+  let html = '';
+  for(let n=2; n<=22; n++){
+    const cls = n===stop.next ? ' cur' : n>stop.next ? ' todo' : '';
+    const d = decl[n] && n!==stop.next ? ' hit '+decl[n] : '';
+    html += `<div class="ln${cls}${d}"><i>${n}</i><span>${hl(L(n))||' '}</span></div>`;
+  }
+  document.getElementById('hoist-code').innerHTML = `<div class="fname"><span>arrowFunctions.js</span><span>paused before line ${stop.next}</span></div>` + html;
+  document.getElementById('bindings').innerHTML = BINDS.map(b=>{
+    const st = hStop>=b.at ? 'fn' : b.before;
+    const [o, err] = hOut(b, st);
+    const expr = hMode==='log' ? 'console.log('+b.name+')' : b.name+'(1, 2)';
+    return `<div class="bind"><div class="nm">${b.name}<small>${esc(b.kind)} · line ${b.line}</small></div><span class="chip ${st}">${esc(CHIP[st](b.name))}</span><div class="res">${esc(expr)} → <span class="${err?'e':''}">${esc(o)}</span></div><div class="how">${esc(b.how)}</div></div>`;
+  }).join('');
+}
+document.getElementById('hm-log').onclick = ()=>{ hMode='log'; renderHoist(); };
+document.getElementById('hm-call').onclick = ()=>{ hMode='call'; renderHoist(); };
+renderHoist();
+
+/* ---------- the eight cases ---------- */
+const MOD = {name:'module.exports', val:"{ name: 'Global' }"};
+const CASES = [
+ { short:'Object methods', title:'Methods on an object literal', range:[36,50],
+   lesson:"An object literal's braces are not a scope. An arrow written inside one looks straight past the object to the module.",
+   calls:[
+    {label:'user1.sayHi()', kind:'reg', lines:[40,41,42,49], rule:'method', who:'user1', val:"{ name: 'Ivan', … }", out:['regular: Ivan'],
+     why:"sayHi is a regular function and user1 is before the dot, so this is user1."},
+    {label:'user1.sayHiArrow()', kind:'arr', lines:[43,44,45,46,47,50], ctx:[37], chain:['sayHiArrow','module scope'],
+     via:"At the top of a CommonJS module, this is module.exports. Line 37 gave it name: 'Global'.", who:MOD.name, val:MOD.val, out:['arrow: Global'],
+     why:"user1 before the dot changes nothing. The arrow was written at module level, so it uses the module's this."}
+ ]},
+ { short:'Callbacks', title:'Callbacks inside a method', range:[53,90],
+   lesson:"This is where arrows help most. Before arrows, you saved this in a variable or bound the callback.",
+   calls:[
+    {label:'team.printRegular()', kind:'reg', lines:range(58,63).concat(87), resolving:'line 61, inside the callback', rule:'plain', strict:false, who:'globalThis', val:'no name property', bad:true,
+     out:['Ivan is in undefined','Maria is in undefined'],
+     why:"forEach calls the callback as a plain function, not as team.something(). This file isn't in strict mode, so this falls back to globalThis, which has no name."},
+    {label:'team.printSelf()', kind:'reg', lines:range(66,71).concat(88), resolving:'line 67, in printSelf itself', rule:'method', who:'team', val:"{ name: 'Team A', … }",
+     out:['Ivan is in Team A','Maria is in Team A'],
+     why:"this is read once, in printSelf, where it is team. The callback never touches this. It reads self, an ordinary variable it closes over."},
+    {label:'team.printBind()', kind:'reg', lines:range(74,78).concat(89), resolving:'line 76, inside the bound callback', rule:'explicit', how:'.bind(this) on line 77', who:'team', val:"{ name: 'Team A', … }",
+     out:['Ivan is in Team A','Maria is in Team A'],
+     why:".bind(this) runs inside printBind, where this is team. It returns a copy of the callback with this locked to team."},
+    {label:'team.printArrow()', kind:'arr', lines:range(81,85).concat(90), resolving:'line 83, inside the arrow', chain:['forEach callback','printArrow'],
+     via:"printArrow was called as team.printArrow(), so its this is team.", who:'team', val:"{ name: 'Team A', … }",
+     out:['Ivan is in Team A','Maria is in Team A'],
+     why:"The arrow has no this, so it uses printArrow's. No self, no bind."}
+ ]},
+ { short:'setTimeout', title:'The same thing with setTimeout', range:[93,110],
+   lesson:"A timer calls your callback later, and it is the timer that decides this for a regular function.",
+   calls:[
+    {label:'counter.startRegular()', kind:'reg', lines:range(96,101).concat(109), resolving:'line 99, inside the timer callback', rule:'explicit', how:"Node's timer passes its Timeout object", who:'Timeout', val:'{ _idleTimeout: 1, … } (no count)', bad:true, async:true,
+     out:['timeout regular: undefined'],
+     why:"Node calls the callback with this set to its own Timeout object. In a browser it would be window. Neither one has count."},
+    {label:'counter.startArrow()', kind:'arr', lines:range(102,107).concat(110), resolving:'line 104, inside the arrow', chain:['setTimeout callback','startArrow'], async:true,
+     via:"startArrow was called as counter.startArrow(), so its this is counter.", who:'counter', val:'{ count: … }', counts:true,
+     why:"this.count++ changes the real counter. Click again and it keeps counting."}
+ ]},
+ { short:'call / bind', title:'call, apply and bind can’t change an arrow', range:[113,121],
+   lesson:"These three set this for regular functions. An arrow ignores whatever you pass.",
+   calls:[
+    {label:'regularGetName.call(ivan)', kind:'reg', lines:[114,117,118], rule:'explicit', how:'.call(ivan)', who:'ivan', val:"{ name: 'Ivan' }", out:['Ivan'],
+     why:".call(ivan) runs the function once with this set to ivan."},
+    {label:'arrowGetName.call(ivan)', kind:'arr', lines:[115,117,119], ctx:[37], chain:['arrowGetName','module scope'], ignored:'.call(ivan) is ignored',
+     via:"The arrow was written at module level, where this is module.exports.", who:MOD.name, val:MOD.val, out:['Global'],
+     why:"call can't give an arrow a this. It has none to replace."},
+    {label:'regularGetName.bind(ivan)()', kind:'reg', lines:[114,117,120], rule:'explicit', how:'.bind(ivan)', who:'ivan', val:"{ name: 'Ivan' }", out:['Ivan'],
+     why:"bind returns a new function with this permanently set to ivan."},
+    {label:'arrowGetName.bind(ivan)()', kind:'arr', lines:[115,117,121], ctx:[37], chain:['arrowGetName','module scope'], ignored:'.bind(ivan) is ignored',
+     via:"The arrow was written at module level, where this is module.exports.", who:MOD.name, val:MOD.val, out:['Global'],
+     why:"bind makes a copy, but the copy still has no this of its own."}
+ ]},
+ { short:'Extracted methods', title:'Losing this when a method is passed around', range:[124,155], memory:true,
+   lesson:"Copying a method into a variable forgets the object it came from. Fix it with bind, or with an arrow class field.",
+   calls:[
+    {label:'greet()', kind:'reg', lines:[127,129,130], rule:'plain', strict:false, who:'globalThis', val:'no name property', bad:true, out:['Hi, undefined'],
+     why:"greet is the same function as person.greet, but it's called with nothing before the dot. person is forgotten."},
+    {label:'greet.bind(person)()', kind:'reg', lines:[127,131], rule:'explicit', how:'.bind(person)', who:'person', val:"{ name: 'Maria', … }", out:['Hi, Maria'],
+     why:"bind puts person back. Week 2 did the same with emitter.subscribe('done', obj.handleData.bind(obj))."},
+    {label:'onClickRegular()', kind:'reg', lines:[141,142,143,149,150,152], rule:'plain', strict:true, who:'undefined', val:'undefined', bad:true, out:['clicked undefined'],
+     why:"Class bodies are always strict, so a plain call gives undefined instead of globalThis. The this && guard stops it from crashing."},
+    {label:'onClickArrow()', kind:'arr', lines:[145,146,147,149,151,153], chain:['handleClickArrow','constructor (for this instance)'],
+     via:"Class fields are created inside the constructor while new Button('Save') runs, so this is the new instance.", who:'btn', val:"Button { label: 'Save' }", out:['clicked Save'],
+     why:"The arrow was made for btn and keeps btn, however it's passed around."}
+ ]},
+ { short:'new', title:'Arrows can’t be constructors', range:[158,168],
+   lesson:"new needs a function that can receive a fresh this and has a prototype. Arrows have neither.",
+   calls:[
+    {label:"new PersonFn('Ivan')", kind:'reg', lines:[159,162], rule:'new', who:'a new object', val:"PersonFn { name: 'Ivan' }", out:["PersonFn { name: 'Ivan' }"],
+     why:"new creates an empty object linked to PersonFn.prototype, runs the function with this pointing at it, then returns it."},
+    {label:'PersonArrow.prototype', kind:'arr', lines:[160,163], info:true, out:['undefined'],
+     why:"Arrow functions are created without a prototype property. There is nothing for new to link a new object to."},
+    {label:"new PersonArrow('Ivan')", kind:'arr', lines:[160].concat(range(164,168)), newErr:true, out:['PersonArrow is not a constructor'], err:true,
+     why:"The check happens before the body runs, so this.name = name never executes. The catch block prints e.message."}
+ ]},
+ { short:'Prototypes', title:'Don’t use arrows for prototype methods', range:[171,177],
+   lesson:"An arrow on a prototype is written at module level, so it reads the module's this, not the instance.",
+   calls:[
+    {label:'p.getNameRegular()', kind:'reg', lines:[172,175,176], rule:'method', who:'p', val:"PersonFn { name: 'Georgi' }", out:['Georgi'],
+     why:"p is before the dot, so this is p."},
+    {label:'p.getNameArrow()', kind:'arr', lines:[173,175,177], ctx:[37], chain:['getNameArrow','module scope'],
+     via:"Line 173 is at module level, where this is module.exports.", who:MOD.name, val:MOD.val, out:['Global'],
+     why:"It is called as p.getNameArrow(), but the arrow ignores p."}
+ ]},
+ { short:'Nested arrows', title:'An arrow inside an arrow', range:[180,193],
+   lesson:"An arrow looks up through any other arrows until it reaches the nearest regular function, and uses that function's this.",
+   calls:[
+    {label:'outer.regular()', kind:'arr', lines:range(183,189).concat(191), resolving:'line 185, inside arrow2', chain:['arrow2','arrow1','regular'],
+     via:"regular was called as outer.regular(), so its this is outer.", who:'outer', val:"{ name: 'outer', … }", out:['outer'],
+     why:"arrow2 has no this, arrow1 has no this, regular does."},
+    {label:'other.regular()', kind:'arr', lines:range(183,189).concat(192,193), resolving:'line 185, inside arrow2', chain:['arrow2','arrow1','regular'],
+     via:"The same function, now called as other.regular(), so its this is other.", who:'other', val:"{ name: 'other', … }", out:['other'],
+     why:"The arrows didn't change. regular's this changed, and the arrows follow it."}
+ ]}
+];
+
+const RULES = [
+  {id:'arrow', q:'Is it an arrow function?', a:'Yes: use this from where it was written.'},
+  {id:'new', q:'Called with new?', a:'this is a brand-new object.'},
+  {id:'explicit', q:'Is this passed in explicitly?', sub:'call / apply / bind, or the caller supplies one', a:'this is the value passed in.'},
+  {id:'method', q:'Called as obj.fn()?', a:'this is whatever is before the dot.'},
+  {id:'plain', q:'Plain call: fn()', a:'Nothing set this, so it falls back.'}
+];
+
+let cur = 0;
+const sel = CASES.map(()=>0);
+const logs = CASES.map(()=>[]);
+let count = 0;
+
+const tabsEl = document.getElementById('tabs');
+tabsEl.innerHTML = CASES.map((c,i)=>`<button type="button" class="tab" role="tab" id="tab-${i}" aria-controls="lab" aria-selected="false" tabindex="-1"><span class="n">${i+1}</span>${esc(c.short)}</button>`).join('');
+tabsEl.addEventListener('click', e=>{ const b=e.target.closest('.tab'); if(b) show(+b.id.slice(4), true); });
+tabsEl.addEventListener('keydown', e=>{
+  if(e.key==='ArrowRight'||e.key==='ArrowLeft'){ e.preventDefault(); const n=(cur+(e.key==='ArrowRight'?1:-1)+CASES.length)%CASES.length; show(n,true); document.getElementById('tab-'+n).focus(); }
+});
+document.getElementById('prev').onclick = ()=>show(cur-1,true);
+document.getElementById('next').onclick = ()=>show(cur+1,true);
+document.querySelectorAll('[data-go]').forEach(b=>b.onclick=()=>{ show(+b.dataset.go,true); document.getElementById('lab-h').scrollIntoView({behavior:'smooth',block:'start'}); });
+document.getElementById('clear').onclick = ()=>{ logs[cur]=[]; renderTerm(); };
+
+function outFor(call){ return call.counts ? ['timeout arrow: '+(++count)] : call.out; }
+function seed(i){
+  const call = CASES[i].calls[0];
+  logs[i].push({t:'in',s:call.label});
+  (call.counts ? ['timeout arrow: '+(++count)] : call.out).forEach(s=>logs[i].push({t:call.err?'err':'o',s}));
+}
+
+function show(i, user){
+  if(i<0||i>=CASES.length) return;
+  cur = i;
+  CASES.forEach((_,k)=>{ const t=document.getElementById('tab-'+k); t.setAttribute('aria-selected',k===i); t.tabIndex = k===i?0:-1; });
+  if(user) document.getElementById('tab-'+i).scrollIntoView({block:'nearest',inline:'nearest'});
+  const c = CASES[i];
+  document.getElementById('case-title').textContent = (i+1)+'. '+c.title;
+  document.getElementById('case-lesson').textContent = c.lesson;
+  document.getElementById('prev').disabled = i===0;
+  document.getElementById('next').disabled = i===CASES.length-1;
+  document.getElementById('memory').hidden = !c.memory;
+  if(!logs[i].length) seed(i);
+  renderCalls(); renderCode(); renderTerm(); renderResolver();
+  if(user) store.set('this-lab-case', String(i));
+}
+
+function renderCalls(){
+  const c = CASES[cur];
+  const el = document.getElementById('calls');
+  el.innerHTML = c.calls.map((k,j)=>`<button type="button" class="call ${k.kind}" data-j="${j}" aria-pressed="${j===sel[cur]}"><span class="dot"></span>${esc(k.label)}</button>`).join('');
+  el.querySelectorAll('.call').forEach(b=>b.onclick=()=>run(+b.dataset.j));
+  const st = document.getElementById('state');
+  st.innerHTML = cur===2 ? `<span class="state">counter.count = <b>${count}</b></span>` : '';
+}
+
+function run(j){
+  const c = CASES[cur], call = c.calls[j], ci = cur;
+  sel[cur] = j;
+  logs[ci].push({t:'in',s:call.label});
+  if(call.async){
+    const pend = {t:'pend',s:'… queued: runs after the rest of the file finishes'};
+    logs[ci].push(pend);
+    setTimeout(()=>{
+      const k = logs[ci].indexOf(pend);
+      const lines = outFor(call).map(s=>({t:'o',s}));
+      if(k>-1) logs[ci].splice(k,1,...lines);
+      if(cur===ci){ renderTerm(); renderCalls(); }
+    }, 550);
+  } else {
+    outFor(call).forEach(s=>logs[ci].push({t:call.err?'err':'o',s}));
+  }
+  renderCalls(); renderCode(true); renderTerm(); renderResolver();
+}
+
+function renderCode(scroll){
+  const c = CASES[cur], call = c.calls[sel[cur]];
+  const hit = new Set(call.lines), ctx = new Set(call.ctx||[]);
+  const lines = [];
+  const add = n => {
+    const cls = hit.has(n) ? ' hit '+call.kind : ctx.has(n) ? ' hit ctx' : '';
+    lines.push(`<div class="ln${cls}" data-n="${n}"><i>${n}</i><span>${hl(L(n))||' '}</span></div>`);
+  };
+  if(call.ctx && call.ctx.some(n=>n<c.range[0])){
+    call.ctx.filter(n=>n<c.range[0]).forEach(add);
+    lines.push(`<div class="ln"><i>⋮</i><span></span></div>`);
+  }
+  for(let n=c.range[0]; n<=c.range[1]; n++) add(n);
+  const el = document.getElementById('code');
+  el.innerHTML = `<div class="fname"><span>arrowFunctions.js</span><span>lines ${c.range[0]}–${c.range[1]}</span></div>` + lines.join('');
+  const first = el.querySelector('.ln.hit.'+call.kind);
+  if(first){
+    const top = first.offsetTop - 48;
+    if(scroll || top > el.clientHeight - 60) el.scrollTop = Math.max(0, top);
+    else el.scrollTop = 0;
+  }
+}
+
+function renderTerm(){
+  const el = document.getElementById('term');
+  const map = {in:'in',o:'o',pend:'pend',flag:'flag',err:'err'};
+  el.innerHTML = logs[cur].map(l=>`<div class="${map[l.t]}">${esc(l.s)}</div>`).join('') || '<div class="in" style="opacity:.6">click a call above</div>';
+  el.scrollTop = el.scrollHeight;
+}
+
+function resultChip(call){
+  const cls = call.err||call.bad ? 'bad' : call.kind;
+  const val = call.counts ? `{ count: ${count} }` : call.val;
+  if(call.newErr) return `<div class="result bad"><span class="lbl">result</span><span class="val"><b>TypeError</b>: PersonArrow is not a constructor</span></div>`;
+  return `<div class="result ${cls}"><span class="lbl">this →</span><span class="val"><b>${esc(call.who)}</b>${call.who!==val?' '+esc(val):''}</span></div>`;
+}
+
+function renderResolver(){
+  const c = CASES[cur], call = c.calls[sel[cur]];
+  const el = document.getElementById('resolver');
+  const head = `<div class="panel-h"><span class="eyebrow">How this was found</span><span class="muted mono" style="font-size:12px">${esc(call.resolving || 'inside '+call.label.replace(/^new /,'').replace(/\(.*$/,'').split('.').pop())}</span></div>`;
+  if(call.info){
+    el.innerHTML = head + `<div class="result arr"><span class="lbl">value →</span><span class="val"><b>undefined</b></span></div><p class="why">${esc(call.why)}</p><p class="muted" style="font-size:13px">No call happens here, so there is no this to look up.</p>`;
+    return;
+  }
+  let rows = '';
+  if(call.kind==='arr'){
+    RULES.forEach(r=>{
+      if(r.id==='arrow'){
+        let body;
+        if(call.newErr){
+          body = `<div class="a" style="color:var(--bad)">Yes, and it was called with new. Arrows can't be constructed, so JavaScript throws before the body runs.</div>`;
+        } else {
+          const chain = call.chain.map((s,k)=>`<span class="${k===call.chain.length-1?'end':''}">${esc(s)}</span>`).join('<em>→</em>');
+          body = `<div class="a">${esc(r.a)} Walk outward to the nearest scope that has a this:</div><div class="chain">${chain}</div><div class="via">${esc(call.via)}</div>`;
+        }
+        rows += `<div class="rule yes arr"><div class="m">=&gt;</div><div><div class="q">${esc(r.q)}</div>${body}</div></div>`;
+      } else {
+        const ign = r.id==='explicit' && call.ignored ? `<span class="ignored">${esc(call.ignored)}</span>` : '';
+        rows += `<div class="rule skip"><div class="m">–</div><div><div class="q">${esc(r.q)}</div>${ign}</div></div>`;
+      }
+    });
+    if(!call.newErr) rows += `<p class="muted" style="font-size:13px;margin:4px 0 0 42px">Call-site rules are skipped for arrows.</p>`;
+  } else {
+    const idx = RULES.findIndex(r=>r.id===call.rule);
+    RULES.forEach((r,k)=>{
+      let st = k<idx ? 'no' : k===idx ? 'yes reg' : 'dim';
+      const mark = k<idx ? 'no' : k===idx ? 'yes' : '';
+      let extra = '';
+      if(k===idx){
+        if(r.id==='explicit' && call.how) extra = `<div class="a mono" style="font-size:12px">${esc(call.how)}</div>`;
+        if(r.id==='plain') extra = `<div class="strict"><span class="${call.strict?'on':''}">strict → undefined</span><span class="${call.strict?'':'on'}">sloppy → globalThis</span></div>`;
+      }
+      rows += `<div class="rule ${st}"><div class="m">${mark}</div><div><div class="q">${esc(r.q)}${r.sub?`<small>${esc(r.sub)}</small>`:''}</div>${k===idx?`<div class="a">${esc(r.a)}</div>`:''}${extra}</div></div>`;
+    });
+  }
+  el.innerHTML = head + `<div class="flow">${rows}</div>` + resultChip(call) + `<p class="why">${esc(call.why)}</p>` + (call.flag?`<div class="flagnote">${esc(call.flag)}</div>`:'');
+}
+
+/* ---------- memory widget ---------- */
+const LABELS = ['Save','Cancel','Delete','Undo','Share','Print','Close'];
+let insts = 1;
+function renderMem(){
+  const box = document.getElementById('insts');
+  box.innerHTML = Array.from({length:insts},(_,k)=>`<div class="inst"><div class="h">${k===0?'btn':'b'+(k+1)}</div>label: '${LABELS[k%LABELS.length]}'<br><span class="f">handleClickArrow: ƒ #${k+1}</span></div>`).join('');
+  document.getElementById('tally').innerHTML = `<span>arrow copies <b>${insts}</b></span><span>prototype methods <b>1</b></span><span class="mono" style="font-size:12px">Object.hasOwn(btn, 'handleClickArrow') → true · Object.hasOwn(btn, 'handleClickRegular') → false</span>`;
+  document.getElementById('mem-add').disabled = insts>=LABELS.length;
+}
+document.getElementById('mem-add').onclick = ()=>{ if(insts<LABELS.length){ insts++; renderMem(); } };
+document.getElementById('mem-reset').onclick = ()=>{ insts=1; renderMem(); };
+renderMem();
+
+const fromHash = /^#case([1-8])$/.exec(location.hash);
+const saved = parseInt(store.get('this-lab-case'),10);
+show(fromHash ? +fromHash[1]-1 : (saved>=0 && saved<CASES.length ? saved : 0), false);
+})();
+</script>
+
+</body></html>
