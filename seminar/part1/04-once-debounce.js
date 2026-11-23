@@ -3,14 +3,27 @@ const { check, checkAsync, wait } = require('./check');
 // once(fn) - calls fn only the first time.
 // Every later call returns the result of the first one.
 function once(fn) {
-  // TODO
+  let res = null;
+  let hasSetResult = false;
+  return function(...args) {
+    if (hasSetResult) return res;
+    res = fn.apply(this, args)
+    hasSetResult = true
+    return res
+  }
 }
 
 // debounce(fn, ms) - waits until there have been no calls for `ms` milliseconds,
 // then calls fn ONCE with the arguments of the last call.
 // (Think of a search box: search only after the user stops typing.)
 function debounce(fn, ms) {
-  // TODO
+  let timeout;
+  return function(...args) {
+    if (timeout) clearTimeout(timeout)
+    timeout = setTimeout(() => {
+      fn.apply(this, args)
+    }, ms)
+  }
 }
 
 // --------------------------------------------------------------------------

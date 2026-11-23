@@ -4,7 +4,18 @@ const { check } = require('./check');
 // as many as fn expects, and only then calls fn.
 //   curry(f)(1)(2)(3) === curry(f)(1, 2)(3) === curry(f)(1, 2, 3) === f(1, 2, 3)
 function curry(fn) {
-  // TODO
+  const arity = fn.length; // how many args does fn expect
+
+  let argStore = [];
+  const helper = (...args) => {
+    argStore = argStore.concat(args)
+    if (argStore.length >= arity)
+      return fn(...argStore)
+
+    return helper
+  }
+
+  return helper
 }
 
 // --------------------------------------------------------------------------

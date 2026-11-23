@@ -1,0 +1,5 @@
+[
+  { "id": 1, "name": "JS Meetup", "capacity": 50, "bookedCount": 3, "tags": ["js", "meetup"], "remind": true },
+  { "id": 2, "name": "Node.js Workshop", "capacity": 5, "bookedCount": 0, "remind": true },
+  { "id": 3, "name": "Sold-out Talk", "capacity": 2, "bookedCount": 2, "remind": true }
+]
